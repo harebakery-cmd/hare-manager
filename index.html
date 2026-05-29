@@ -36,11 +36,14 @@ body{font-family:var(--font-sans);color:var(--color-text-primary);font-size:15px
 .sec-btn:active{opacity:.7}
 
 
-/* ── Excel Download ── */
-.dl-wrap{display:flex;align-items:center;justify-content:flex-end;margin-bottom:8px}
+/* ── Excel & Image Download ── */
+.dl-wrap{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-bottom:8px}
 .btn-excel{display:flex;align-items:center;gap:4px;padding:6px 9px;font-size:11px;font-weight:600;border:1px solid #1D6F2B;border-radius:8px;cursor:pointer;background:#E8F5EA;color:#1D6F2B;min-height:30px}
 .btn-excel:active{opacity:.7}
 .btn-excel svg{width:13px;height:13px;flex-shrink:0}
+.btn-imgdl{display:flex;align-items:center;gap:4px;padding:6px 9px;font-size:11px;font-weight:600;border:1px solid #185FA5;border-radius:8px;cursor:pointer;background:#E8F0FB;color:#185FA5;min-height:30px}
+.btn-imgdl:active{opacity:.7}
+.btn-imgdl svg{width:13px;height:13px;flex-shrink:0}
 
 /* ── Home screen ── */
 .home-wrap{padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 80px)}
@@ -99,11 +102,6 @@ body{font-family:var(--font-sans);color:var(--color-text-primary);font-size:15px
 .dbadge.half_am{background:#F0E8F8;color:#5B2E91}
 .dbadge.half_pm{background:#EAE1F8;color:#4A2080}
 .dbadge.quarter{background:#F5EDF8;color:#6B35A0}
-.leave-name{font-weight:700}
-.leave-name.annual{color:#A86A05}
-.leave-name.half_am{color:#5B2E91}
-.leave-name.half_pm{color:#4A2080}
-.leave-name.quarter{color:#6B35A0}
 
 .pos-mark{display:inline-block;font-size:9px;font-weight:800;color:#fff;background:#C8844A;border-radius:2px;padding:0 2px;margin-left:2px;line-height:1.3;vertical-align:middle}
 .dbadge-spacer{flex:1;min-height:0}
@@ -241,6 +239,7 @@ body{font-family:var(--font-sans);color:var(--color-text-primary);font-size:15px
 </style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <div class="app" id="app"></div>
 
 <script>
@@ -506,6 +505,10 @@ function renderScheduleView(parent){
   const dlBtn=document.createElement('button');dlBtn.className='btn-excel';
   dlBtn.innerHTML=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>${APP.calYear}년 ${APP.calMonth+1}월 엑셀 다운로드`;
   dlBtn.onclick=()=>exportExcel();
+  const imgBtn=document.createElement('button');imgBtn.className='btn-imgdl';
+  imgBtn.innerHTML=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>달력 이미지 저장`;
+  imgBtn.onclick=()=>exportCalendarImage(store);
+  dlWrap.appendChild(imgBtn);
   dlWrap.appendChild(dlBtn);
   content.appendChild(dlWrap);
 
@@ -696,17 +699,12 @@ function renderCalendar(parent,store){
     function renderNameWithPos(name){
       return posNames.has(name)?`${calendarDisplayName(name)}<span class="pos-mark">P</span>`:calendarDisplayName(name);
     }
-    function renderLeaveName(name,shift){
-      const label=shift==='연차'?'(연차)':shift==='오전반차'?'(오전반차)':shift==='오후반차'?'(오후반차)':shift==='반반차'?'(반반차)':'';
-      return `<span class="leave-name ${SHIFT_CLS[shift]||''}">${calendarDisplayName(name)}${label}</span>`;
-    }
 
     // 오픈/미들/마감/휴무: 있으면 badge, 없으면 spacer (높이 균등 분배)
     // 오픈
-    const openNames=[...byShift['오픈'].map(n=>renderNameWithPos(n)),...byShift['오후반차'].map(n=>renderLeaveName(n,'오후반차')),...byShift['반반차'].map(n=>renderLeaveName(n,'반반차'))];
-    if(openNames.length){
+    if(byShift['오픈'].length){
       const b=document.createElement('div');b.className=`dbadge ${SHIFT_CLS['오픈']}`;
-      b.innerHTML=`<span class="dbadge-label">오픈</span><span class="dbadge-names">${openNames.join(' ')}</span>`;
+      b.innerHTML=`<span class="dbadge-label">오픈</span><span class="dbadge-names">${byShift['오픈'].map(n=>renderNameWithPos(n)).join(' ')}</span>`;
       badges.appendChild(b);
     }
     // 미들
@@ -716,17 +714,16 @@ function renderCalendar(parent,store){
       badges.appendChild(b);
     }
     // 마감
-    const closeNames=[...byShift['마감'].map(n=>renderNameWithPos(n)),...byShift['오전반차'].map(n=>renderLeaveName(n,'오전반차'))];
-    if(closeNames.length){
+    if(byShift['마감'].length){
       const b=document.createElement('div');b.className=`dbadge ${SHIFT_CLS['마감']}`;
-      b.innerHTML=`<span class="dbadge-label">마감</span><span class="dbadge-names">${closeNames.join(' ')}</span>`;
+      b.innerHTML=`<span class="dbadge-label">마감</span><span class="dbadge-names">${byShift['마감'].map(n=>renderNameWithPos(n)).join(' ')}</span>`;
       badges.appendChild(b);
     }
     // 휴무 (이름+월누적 횟수)
-    const offNames=[...byShift['휴무'].map(n=>displayNameWithShiftCount(sched,n,'휴무',dayKey)),...byShift['연차'].map(n=>renderLeaveName(n,'연차'))];
-    if(offNames.length){
+    if(byShift['휴무'].length){
       const b=document.createElement('div');b.className=`dbadge ${SHIFT_CLS['휴무']}`;
-      b.innerHTML=`<span class="dbadge-label">휴무</span><span class="dbadge-names">${offNames.join(' ')}</span>`;
+      const short=byShift['휴무'].map(n=>displayNameWithShiftCount(sched,n,'휴무',dayKey)).join(' ');
+      b.innerHTML=`<span class="dbadge-label">휴무</span><span class="dbadge-names">${short}</span>`;
       badges.appendChild(b);
     }
     cell.appendChild(badges);
@@ -1035,6 +1032,10 @@ function renderModal(root){
       {key:'미들',cls:'mid',label:'미들'},
       {key:'마감',cls:'close',label:'마감'},
       {key:'휴무',cls:'off',label:'휴무'},
+      {key:'연차',cls:'annual',label:'연차'},
+      {key:'오전반차',cls:'half_am',label:'오전반차'},
+      {key:'오후반차',cls:'half_pm',label:'오후반차'},
+      {key:'반반차',cls:'quarter',label:'반반차'},
     ];
 
     // build summary rows – only groups that have people
@@ -1043,30 +1044,10 @@ function renderModal(root){
       if(!byShiftSummary[sh])byShiftSummary[sh]=[];
       byShiftSummary[sh].push(name);
     });
-    function summaryLeaveName(name,shift){
-      const label=shift==='연차'?'(연차)':shift==='오전반차'?'(오전반차)':shift==='오후반차'?'(오후반차)':shift==='반반차'?'(반반차)':'';
-      return `<span class="leave-name ${SHIFT_CLS[shift]||''}">${name}${label}</span>`;
-    }
-    function summaryNamesFor(key){
-      if(key==='오픈')return [
-        ...(byShiftSummary['오픈']||[]),
-        ...(byShiftSummary['오후반차']||[]).map(n=>summaryLeaveName(n,'오후반차')),
-        ...(byShiftSummary['반반차']||[]).map(n=>summaryLeaveName(n,'반반차')),
-      ];
-      if(key==='마감')return [
-        ...(byShiftSummary['마감']||[]),
-        ...(byShiftSummary['오전반차']||[]).map(n=>summaryLeaveName(n,'오전반차')),
-      ];
-      if(key==='휴무')return [
-        ...(byShiftSummary['휴무']||[]),
-        ...(byShiftSummary['연차']||[]).map(n=>summaryLeaveName(n,'연차')),
-      ];
-      return byShiftSummary[key]||[];
-    }
 
     let hasAnyone=false;
     SHIFT_GROUPS.forEach(sg=>{
-      const names=summaryNamesFor(sg.key);
+      const names=byShiftSummary[sg.key]||[];
       if(!names.length)return;
       hasAnyone=true;
       const row=document.createElement('div');
@@ -1082,7 +1063,7 @@ function renderModal(root){
       row.appendChild(lbl);
       const nameSpan=document.createElement('span');
       nameSpan.style.cssText='font-size:13px;color:var(--color-text-primary);line-height:1.6';
-      nameSpan.innerHTML=names.join(', ');
+      nameSpan.textContent=names.join(', ');
       row.appendChild(nameSpan);
       summaryCard.appendChild(row);
     });
@@ -1280,6 +1261,49 @@ function renderModal(root){
   bg.appendChild(modal);wrap.appendChild(bg);root.appendChild(wrap);
 }
 
+
+function exportCalendarImage(store){
+  // 달력 영역 찾기
+  const calEl=document.querySelector('.cal-wrap');
+  if(!calEl){alert('달력을 찾을 수 없습니다.');return;}
+  const storeName=store?store.name:'';
+  const sec=APP.activeSection||'';
+  const y=APP.calYear, m=APP.calMonth+1;
+  const fileName=`${storeName}_${sec}_${y}년${m}월_달력.png`;
+
+  // 버튼 일시적으로 숨기기
+  const imgBtn=document.querySelector('.btn-imgdl');
+  const excelBtn=document.querySelector('.btn-excel');
+  if(imgBtn)imgBtn.style.display='none';
+  if(excelBtn)excelBtn.style.display='none';
+
+  // 제목 임시 레이블 추가
+  const headerEl=calEl.querySelector('.cal-header h3');
+  const origTitle=headerEl?headerEl.textContent:'';
+  if(headerEl)headerEl.textContent=`${storeName} ${sec} | ${y}년 ${m}월 달력`;
+
+  html2canvas(calEl,{
+    scale:2,
+    useCORS:true,
+    backgroundColor:'#ffffff',
+    logging:false
+  }).then(canvas=>{
+    // 원상 복구
+    if(headerEl)headerEl.textContent=origTitle;
+    if(imgBtn)imgBtn.style.display='';
+    if(excelBtn)excelBtn.style.display='';
+    // 다운로드
+    const link=document.createElement('a');
+    link.download=fileName;
+    link.href=canvas.toDataURL('image/png');
+    link.click();
+  }).catch(err=>{
+    if(headerEl)headerEl.textContent=origTitle;
+    if(imgBtn)imgBtn.style.display='';
+    if(excelBtn)excelBtn.style.display='';
+    alert('이미지 저장에 실패했습니다: '+err.message);
+  });
+}
 
 function exportExcel(){
   const store=getStore();
