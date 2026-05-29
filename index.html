@@ -253,6 +253,9 @@ const SHIFT_ANNUAL_WEIGHT={연차:1,오전반차:0.5,오후반차:0.5,반반차:
 // 연장 근무 시간 키: '__ot__이름' → 시간 수 (숫자)
 function otKey(name){return '__ot__'+name;}
 function getOT(dayData,name){const v=dayData[otKey(name)];return(v&&v>0)?v:0;}
+// 연장 근무 사유 키: '__otr__이름' → 사유 문자열
+function otrKey(name){return '__otr__'+name;}
+function getOTR(dayData,name){return dayData[otrKey(name)]||'';}
 const SECTIONS_ALL=['매장','공장'];
 
 // Logo images (base64 encoded from uploaded files)
@@ -895,6 +898,99 @@ function renderStats(parent,store){
     detailWrap.appendChild(detailTable);
   }
   statsBody.appendChild(detailWrap);
+
+  // ── 연장 근무 세부정보 ──────────────────────────────────
+  const otDetailWrap=document.createElement('div');
+  otDetailWrap.style.cssText='width:100%;overflow-x:auto;margin-top:14px';
+  const otDetailTitle=document.createElement('div');
+  otDetailTitle.textContent='연장 근무 세부정보';
+  otDetailTitle.style.cssText='font-size:12px;font-weight:600;color:var(--color-text-secondary);margin:0 0 8px 2px';
+  otDetailWrap.appendChild(otDetailTitle);
+
+  // 연장 근무 데이터 수집
+  const otDetails=[];
+  Object.keys(sched).sort().forEach(dk=>{
+    const day=sched[dk]||{};
+    Object.keys(day).forEach(k=>{
+      if(!k.startsWith('__ot__'))return;
+      const empName=k.slice(6);
+      if(!empNames.has(empName))return;
+      const hours=Number(day[k]);
+      if(!hours||hours<=0)return;
+      const reason=getOTR(day,empName);
+      otDetails.push({name:empName,dayKey:dk,hours,reason});
+    });
+  });
+
+  if(otDetails.length===0){
+    const empty=document.createElement('div');
+    empty.textContent='등록된 연장 근무 내역이 없습니다.';
+    empty.style.cssText='padding:10px 8px;border-radius:8px;background:var(--color-background-secondary);font-size:12px;color:var(--color-text-secondary);text-align:center';
+    otDetailWrap.appendChild(empty);
+  } else {
+    const otTable=document.createElement('table');
+    otTable.style.cssText='width:100%;border-collapse:collapse;font-size:12px;min-width:420px';
+    const otHead=document.createElement('thead');
+    const otHeadRow=document.createElement('tr');
+    ['직원이름','일자','연장시간','사유'].forEach((h,i)=>{
+      const th=document.createElement('th');
+      th.textContent=h;
+      th.style.cssText=`padding:6px 4px;text-align:center;border-bottom:1.5px solid var(--color-border-secondary);font-weight:600;color:var(--color-text-secondary);font-size:11px;white-space:nowrap;background:var(--color-background-secondary);${i===0?'text-align:left;padding-left:8px;':''}`;
+      otHeadRow.appendChild(th);
+    });
+    otHead.appendChild(otHeadRow);otTable.appendChild(otHead);
+
+    const otBody2=document.createElement('tbody');
+    otDetails.forEach((item,idx)=>{
+      const tr=document.createElement('tr');
+      tr.style.background=idx%2===0?'var(--color-background-primary)':'var(--color-background-secondary)';
+
+      // 직원명
+      const tdName=document.createElement('td');
+      tdName.textContent=item.name;
+      tdName.style.cssText='padding:6px 4px;text-align:left;padding-left:8px;font-size:12px;font-weight:600;color:var(--color-text-primary);white-space:nowrap';
+      tr.appendChild(tdName);
+
+      // 일자
+      const tdDay=document.createElement('td');
+      tdDay.textContent=item.dayKey;
+      tdDay.style.cssText='padding:6px 4px;text-align:center;font-size:12px;color:var(--color-text-secondary);white-space:nowrap';
+      tr.appendChild(tdDay);
+
+      // 연장시간
+      const tdHours=document.createElement('td');
+      tdHours.textContent=`+${item.hours}h`;
+      tdHours.style.cssText='padding:6px 4px;text-align:center;font-size:12px;font-weight:600;color:#185FA5;white-space:nowrap';
+      tr.appendChild(tdHours);
+
+      // 사유 (인라인 편집 가능)
+      const tdReason=document.createElement('td');
+      tdReason.style.cssText='padding:4px;min-width:100px';
+      const reasonInp=document.createElement('input');
+      reasonInp.type='text';
+      reasonInp.value=item.reason;
+      reasonInp.placeholder='사유 입력';
+      reasonInp.style.cssText='width:100%;padding:4px 6px;font-size:11px;border:1px solid #E6D8CA;border-radius:6px;background:transparent;color:var(--color-text-primary);outline:none';
+      reasonInp.onfocus=()=>{reasonInp.style.background='#fff';reasonInp.style.borderColor='#C8844A';};
+      reasonInp.onblur=()=>{reasonInp.style.background='transparent';reasonInp.style.borderColor='#E6D8CA';};
+      reasonInp.oninput=()=>{
+        const v=reasonInp.value.trim();
+        const dayD=sched[item.dayKey];
+        if(!dayD)return;
+        if(v)dayD[otrKey(item.name)]=v;
+        else delete dayD[otrKey(item.name)];
+        save();
+      };
+      tdReason.appendChild(reasonInp);
+      tr.appendChild(tdReason);
+
+      otBody2.appendChild(tr);
+    });
+    otTable.appendChild(otBody2);
+    otDetailWrap.appendChild(otTable);
+  }
+  statsBody.appendChild(otDetailWrap);
+
   wrap.appendChild(statsBody);
   parent.appendChild(wrap);
 }
@@ -1206,6 +1302,18 @@ function renderModal(root){
         plusBtn.type='button';
         plusBtn.textContent='+';
         plusBtn.style.cssText='width:32px;height:32px;border:1px solid #D8C9BA;border-radius:8px;background:#fff;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center';
+        // 사유 입력
+        const reasonInp=document.createElement('input');
+        reasonInp.type='text';
+        reasonInp.placeholder='사유 (선택)';
+        reasonInp.value=getOTR(dayData,e.name);
+        reasonInp.style.cssText='flex:1;min-width:0;padding:6px 8px;font-size:12px;border:1px solid #D8C9BA;border-radius:8px;background:#fff;color:var(--color-text-primary);height:32px';
+        reasonInp.oninput=()=>{
+          const v=reasonInp.value.trim();
+          if(v)dayData[otrKey(e.name)]=v;
+          else delete dayData[otrKey(e.name)];
+          save();
+        };
         // 현재 값 추적
         let val=curOt;
         const update=()=>{
@@ -1217,7 +1325,7 @@ function renderModal(root){
         };
         minusBtn.onclick=()=>{if(val>=0.5){val=Math.round((val-0.5)*10)/10;update();}};
         plusBtn.onclick=()=>{val=Math.round((val+0.5)*10)/10;update();};
-        row.appendChild(minusBtn);row.appendChild(otDisp);row.appendChild(plusBtn);
+        row.appendChild(minusBtn);row.appendChild(otDisp);row.appendChild(plusBtn);row.appendChild(reasonInp);
         otBody.appendChild(row);
       });
     }
@@ -1392,7 +1500,8 @@ function exportExcel(){
         const ot=getOT(dayD,e.name);
         const LABELS={오픈:'오픈',미들:'미들',마감:'마감',휴무:'휴무',연차:'연차',오전반차:'오전반차',오후반차:'오후반차',반반차:'반반차'};
         const shLabel=LABELS[sh]||(sh?sh:'');
-        row.push(ot>0?`${shLabel||''}(+${ot}h)`:shLabel);
+        const otReason=ot>0?getOTR(dayD,e.name):'';
+        row.push(ot>0?`${shLabel||''}(+${ot}h${otReason?'/'+otReason:''})`:shLabel);
         if(['오픈','미들','마감'].includes(sh))workCnt++;
         else if(sh==='휴무')offCnt++;
         else if(sh==='연차')annualUsed++;
