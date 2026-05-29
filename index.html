@@ -194,6 +194,25 @@ body{font-family:var(--font-sans);color:var(--color-text-primary);font-size:15px
 .btn-admin.secondary{border-color:#D8C9BA;background:#fff;color:var(--color-text-secondary)}
 .admin-error{font-size:12px;color:#A32D2D;margin-top:8px;min-height:18px}
 
+/* ── Store name edit inline ── */
+.tab-btn-wrap{position:relative;display:inline-flex;align-items:center}
+.tab-edit-icon{position:absolute;right:-2px;top:2px;width:16px;height:16px;background:#F5EDE3;border:0.5px solid #C8844A;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:9px;color:#7D4A1A;line-height:1;z-index:10}
+.tab-edit-icon:active{opacity:.7}
+.store-name-modal{background:#fff;border-radius:16px 16px 0 0;padding:20px 16px 32px;width:100%;max-width:480px;z-index:201;position:relative;box-shadow:0 -10px 30px rgba(0,0,0,.16)}
+.store-name-modal h3{font-size:16px;font-weight:500;margin-bottom:16px}
+
+/* ── Memo section ── */
+.memo-section{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:12px;margin-bottom:12px}
+.memo-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.memo-header h4{font-size:14px;font-weight:500;color:var(--color-text-primary)}
+.memo-save-btn{padding:5px 12px;font-size:12px;border:0.5px solid #C8844A;border-radius:8px;cursor:pointer;background:#F5EDE3;color:#7D4A1A;min-height:30px}
+.memo-save-btn:active{opacity:.7}
+.memo-save-btn.saved{background:#EAF3DE;border-color:#639922;color:#27500A}
+.memo-textarea{width:100%;min-height:90px;padding:10px;font-size:13px;font-family:var(--font-sans);border:0.5px solid var(--color-border-secondary);border-radius:8px;background:var(--color-background-secondary);color:var(--color-text-primary);resize:none;line-height:1.6;outline:none}
+.memo-textarea:focus{border-color:#C8844A;background:#fff}
+.memo-textarea::placeholder{color:var(--color-text-tertiary,#BBB)}
+.memo-empty{font-size:12px;color:var(--color-text-secondary);text-align:center;padding:12px 0}
+
 /* page padding */
 .page-pad{padding:0 0}
 @media (max-width:360px){
@@ -236,7 +255,8 @@ let APP={
   calMonth:new Date().getMonth(),
   adminPassword:'hare',
   adminUnlocked:false,
-  modal:null
+  modal:null,
+  memos:{}
 };
 
 function empKey(sid,sec){return `${sid}__${sec}`}
@@ -383,11 +403,26 @@ function renderScheduleView(parent){
   // Store tabs
   const nav=document.createElement('div');nav.className='top-nav';
   APP.stores.forEach(s=>{
+    const wrap=document.createElement('div');wrap.className='tab-btn-wrap';
     const b=document.createElement('button');
     b.className='tab-btn'+(APP.activeStoreId===s.id?' active':'');
     b.textContent=s.name;
     b.onclick=()=>{APP.activeStoreId=s.id;APP.activeSection=s.sections[0]||'매장';render()};
-    nav.appendChild(b);
+    wrap.appendChild(b);
+    // pencil icon only on active tab
+    if(APP.activeStoreId===s.id){
+      const pencil=document.createElement('span');
+      pencil.className='tab-edit-icon';
+      pencil.title='점포명 수정';
+      pencil.textContent='✎';
+      pencil.onclick=(e)=>{
+        e.stopPropagation();
+        APP.modal={type:'editStoreName',storeId:s.id,form:{name:s.name}};
+        render();
+      };
+      wrap.appendChild(pencil);
+    }
+    nav.appendChild(wrap);
   });
   parent.appendChild(nav);
 
@@ -423,6 +458,7 @@ function renderScheduleView(parent){
 
   renderCalendar(content,store);
   renderStats(content,store);
+  renderMemo(content,store);
   renderEmpSection(content,store);
   parent.appendChild(content);
 }
@@ -665,6 +701,38 @@ function renderStats(parent,store){
   tbody.appendChild(sumTr);
   table.appendChild(tbody);
   tbl.appendChild(table);wrap.appendChild(tbl);
+  parent.appendChild(wrap);
+}
+
+function getMemoKey(storeId,section,y,m){return `memo_${storeId}_${section}_${y}_${m}`;}
+function getMemo(storeId,section,y,m){return APP.memos&&APP.memos[getMemoKey(storeId,section,y,m)]||'';}
+function setMemo(storeId,section,y,m,text){if(!APP.memos)APP.memos={};APP.memos[getMemoKey(storeId,section,y,m)]=text;}
+
+function renderMemo(parent,store){
+  const sec=APP.activeSection;
+  const y=APP.calYear,m=APP.calMonth;
+  const wrap=document.createElement('div');wrap.className='memo-section';
+
+  const hdr=document.createElement('div');hdr.className='memo-header';
+  const title=document.createElement('h4');title.innerHTML='📝 메모';
+  const saveBtn=document.createElement('button');saveBtn.className='memo-save-btn';saveBtn.textContent='저장';
+  hdr.appendChild(title);hdr.appendChild(saveBtn);wrap.appendChild(hdr);
+
+  const ta=document.createElement('textarea');
+  ta.className='memo-textarea';
+  ta.placeholder=`${APP.calYear}년 ${APP.calMonth+1}월 ${store.name} ${sec} 메모를 입력하세요...`;
+  ta.value=getMemo(store.id,sec,y,m);
+  wrap.appendChild(ta);
+
+  saveBtn.onclick=()=>{
+    setMemo(store.id,sec,y,m,ta.value);
+    save();
+    saveBtn.textContent='✓ 저장됨';
+    saveBtn.className='memo-save-btn saved';
+    setTimeout(()=>{saveBtn.textContent='저장';saveBtn.className='memo-save-btn';},1500);
+  };
+  // auto-resize textarea
+  ta.oninput=()=>{ta.style.height='auto';ta.style.height=ta.scrollHeight+'px';};
   parent.appendChild(wrap);
 }
 
@@ -940,9 +1008,30 @@ function renderModal(root){
       setEmps(m.storeId,m.section,emps);
       APP.modal=null;save();render();
     };
+  } else if(m.type==='editStoreName'){
+    const store=APP.stores.find(s=>s.id===m.storeId);
+    if(!store){APP.modal=null;render();return;}
+    const h3=document.createElement('h3');h3.textContent='점포명 수정';modal.appendChild(h3);
+    modal.innerHTML+=`<div class="form-card primary">
+      <div class="form-card-title">점포명</div>
+      <div class="form-row"><label>점포 이름</label><input id="fi-storename" type="text" placeholder="점포명 입력" value="${store.name}"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" id="mb-c">취소</button>
+      <button class="btn-confirm" id="mb-a">저장</button>
+    </div>`;
+    setTimeout(()=>{const inp=modal.querySelector('#fi-storename');if(inp){inp.focus();inp.select();}},0);
+    modal.querySelector('#mb-c').onclick=()=>{APP.modal=null;render()};
+    modal.querySelector('#mb-a').onclick=()=>{
+      const name=modal.querySelector('#fi-storename').value.trim();
+      if(!name){alert('점포명을 입력해주세요.');return;}
+      store.name=name;
+      APP.modal=null;save();render();
+    };
+    modal.querySelector('#fi-storename').onkeydown=(e)=>{
+      if(e.key==='Enter'){const name=e.target.value.trim();if(!name)return;store.name=name;APP.modal=null;save();render();}
+    };
   }
-
-  bg.appendChild(modal);wrap.appendChild(bg);root.appendChild(wrap);
 }
 
 
