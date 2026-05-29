@@ -194,12 +194,15 @@ body{font-family:var(--font-sans);color:var(--color-text-primary);font-size:15px
 .btn-admin.secondary{border-color:#D8C9BA;background:#fff;color:var(--color-text-secondary)}
 .admin-error{font-size:12px;color:#A32D2D;margin-top:8px;min-height:18px}
 
-/* ── Store name edit inline ── */
-.tab-btn-wrap{position:relative;display:inline-flex;align-items:center}
-.tab-edit-icon{position:absolute;right:-2px;top:2px;width:16px;height:16px;background:#F5EDE3;border:0.5px solid #C8844A;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:9px;color:#7D4A1A;line-height:1;z-index:10}
-.tab-edit-icon:active{opacity:.7}
-.store-name-modal{background:#fff;border-radius:16px 16px 0 0;padding:20px 16px 32px;width:100%;max-width:480px;z-index:201;position:relative;box-shadow:0 -10px 30px rgba(0,0,0,.16)}
-.store-name-modal h3{font-size:16px;font-weight:500;margin-bottom:16px}
+/* ── Store tab edit ── */
+.tab-name-wrap{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.tab-pencil{font-size:11px;opacity:.55;cursor:pointer;padding:2px 3px;border-radius:4px;background:transparent;border:none;color:inherit;line-height:1;vertical-align:middle}
+.tab-pencil:active{opacity:1;background:rgba(0,0,0,.08)}
+
+/* ── Section delete ── */
+.sec-btn-wrap{display:inline-flex;align-items:center;flex:none}
+.sec-del{font-size:11px;padding:0 5px 0 1px;cursor:pointer;background:transparent;border:none;color:#A32D2D;line-height:1;opacity:.6}
+.sec-del:active{opacity:1}
 
 /* ── Memo section ── */
 .memo-section{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:12px;margin-bottom:12px}
@@ -211,7 +214,6 @@ body{font-family:var(--font-sans);color:var(--color-text-primary);font-size:15px
 .memo-textarea{width:100%;min-height:90px;padding:10px;font-size:13px;font-family:var(--font-sans);border:0.5px solid var(--color-border-secondary);border-radius:8px;background:var(--color-background-secondary);color:var(--color-text-primary);resize:none;line-height:1.6;outline:none}
 .memo-textarea:focus{border-color:#C8844A;background:#fff}
 .memo-textarea::placeholder{color:var(--color-text-tertiary,#BBB)}
-.memo-empty{font-size:12px;color:var(--color-text-secondary);text-align:center;padding:12px 0}
 
 /* page padding */
 .page-pad{padding:0 0}
@@ -403,16 +405,13 @@ function renderScheduleView(parent){
   // Store tabs
   const nav=document.createElement('div');nav.className='top-nav';
   APP.stores.forEach(s=>{
-    const wrap=document.createElement('div');wrap.className='tab-btn-wrap';
     const b=document.createElement('button');
     b.className='tab-btn'+(APP.activeStoreId===s.id?' active':'');
-    b.textContent=s.name;
-    b.onclick=()=>{APP.activeStoreId=s.id;APP.activeSection=s.sections[0]||'매장';render()};
-    wrap.appendChild(b);
-    // pencil icon only on active tab
+    const nameWrap=document.createElement('span');nameWrap.className='tab-name-wrap';
+    nameWrap.textContent=s.name;
     if(APP.activeStoreId===s.id){
-      const pencil=document.createElement('span');
-      pencil.className='tab-edit-icon';
+      const pencil=document.createElement('button');
+      pencil.className='tab-pencil';
       pencil.title='점포명 수정';
       pencil.textContent='✎';
       pencil.onclick=(e)=>{
@@ -420,9 +419,11 @@ function renderScheduleView(parent){
         APP.modal={type:'editStoreName',storeId:s.id,form:{name:s.name}};
         render();
       };
-      wrap.appendChild(pencil);
+      nameWrap.appendChild(pencil);
     }
-    nav.appendChild(wrap);
+    b.appendChild(nameWrap);
+    b.onclick=()=>{APP.activeStoreId=s.id;APP.activeSection=s.sections[0]||'매장';render()};
+    nav.appendChild(b);
   });
   parent.appendChild(nav);
 
@@ -439,11 +440,28 @@ function renderScheduleView(parent){
   if(store.sections.length>0){
     const secRow=document.createElement('div');secRow.className='sec-row';
     store.sections.forEach(sec=>{
+      const wrap=document.createElement('div');wrap.className='sec-btn-wrap';
       const b=document.createElement('button');
       b.className='sec-btn'+(APP.activeSection===sec?' active':'');
       b.textContent=sec;
       b.onclick=()=>{APP.activeSection=sec;render()};
-      secRow.appendChild(b);
+      wrap.appendChild(b);
+      // × 삭제 버튼 (1개만 남으면 숨김)
+      if(store.sections.length>1){
+        const del=document.createElement('button');
+        del.className='sec-del';
+        del.title=`${sec} 삭제`;
+        del.textContent='×';
+        del.onclick=(e)=>{
+          e.stopPropagation();
+          if(!confirm(`"${sec}" 구역을 삭제하면 해당 데이터가 모두 삭제됩니다.\n계속할까요?`))return;
+          store.sections=store.sections.filter(s=>s!==sec);
+          if(APP.activeSection===sec)APP.activeSection=store.sections[0];
+          save();render();
+        };
+        wrap.appendChild(del);
+      }
+      secRow.appendChild(wrap);
     });
     content.appendChild(secRow);
     if(!store.sections.includes(APP.activeSection))APP.activeSection=store.sections[0];
@@ -705,7 +723,7 @@ function renderStats(parent,store){
 }
 
 function getMemoKey(storeId,section,y,m){return `memo_${storeId}_${section}_${y}_${m}`;}
-function getMemo(storeId,section,y,m){return APP.memos&&APP.memos[getMemoKey(storeId,section,y,m)]||'';}
+function getMemo(storeId,section,y,m){return(APP.memos&&APP.memos[getMemoKey(storeId,section,y,m)])||'';}
 function setMemo(storeId,section,y,m,text){if(!APP.memos)APP.memos={};APP.memos[getMemoKey(storeId,section,y,m)]=text;}
 
 function renderMemo(parent,store){
@@ -714,7 +732,7 @@ function renderMemo(parent,store){
   const wrap=document.createElement('div');wrap.className='memo-section';
 
   const hdr=document.createElement('div');hdr.className='memo-header';
-  const title=document.createElement('h4');title.innerHTML='📝 메모';
+  const title=document.createElement('h4');title.textContent='📝 메모';
   const saveBtn=document.createElement('button');saveBtn.className='memo-save-btn';saveBtn.textContent='저장';
   hdr.appendChild(title);hdr.appendChild(saveBtn);wrap.appendChild(hdr);
 
@@ -724,6 +742,9 @@ function renderMemo(parent,store){
   ta.value=getMemo(store.id,sec,y,m);
   wrap.appendChild(ta);
 
+  // auto-resize
+  ta.oninput=()=>{ta.style.height='auto';ta.style.height=ta.scrollHeight+'px';};
+
   saveBtn.onclick=()=>{
     setMemo(store.id,sec,y,m,ta.value);
     save();
@@ -731,8 +752,6 @@ function renderMemo(parent,store){
     saveBtn.className='memo-save-btn saved';
     setTimeout(()=>{saveBtn.textContent='저장';saveBtn.className='memo-save-btn';},1500);
   };
-  // auto-resize textarea
-  ta.oninput=()=>{ta.style.height='auto';ta.style.height=ta.scrollHeight+'px';};
   parent.appendChild(wrap);
 }
 
@@ -1013,25 +1032,27 @@ function renderModal(root){
     if(!store){APP.modal=null;render();return;}
     const h3=document.createElement('h3');h3.textContent='점포명 수정';modal.appendChild(h3);
     modal.innerHTML+=`<div class="form-card primary">
-      <div class="form-card-title">점포명</div>
-      <div class="form-row"><label>점포 이름</label><input id="fi-storename" type="text" placeholder="점포명 입력" value="${store.name}"></div>
+      <div class="form-card-title">점포 이름</div>
+      <div class="form-row"><label>점포명</label><input id="fi-sname" type="text" placeholder="점포명 입력" value="${store.name}"></div>
     </div>
     <div class="modal-btns">
       <button class="btn-cancel" id="mb-c">취소</button>
-      <button class="btn-confirm" id="mb-a">저장</button>
+      <button class="btn-confirm" id="mb-s">저장</button>
     </div>`;
-    setTimeout(()=>{const inp=modal.querySelector('#fi-storename');if(inp){inp.focus();inp.select();}},0);
-    modal.querySelector('#mb-c').onclick=()=>{APP.modal=null;render()};
-    modal.querySelector('#mb-a').onclick=()=>{
-      const name=modal.querySelector('#fi-storename').value.trim();
+    const inp=modal.querySelector('#fi-sname');
+    setTimeout(()=>{inp.focus();inp.select();},0);
+    const doSave=()=>{
+      const name=inp.value.trim();
       if(!name){alert('점포명을 입력해주세요.');return;}
       store.name=name;
       APP.modal=null;save();render();
     };
-    modal.querySelector('#fi-storename').onkeydown=(e)=>{
-      if(e.key==='Enter'){const name=e.target.value.trim();if(!name)return;store.name=name;APP.modal=null;save();render();}
-    };
+    inp.onkeydown=(e)=>{if(e.key==='Enter')doSave();};
+    modal.querySelector('#mb-c').onclick=()=>{APP.modal=null;render();};
+    modal.querySelector('#mb-s').onclick=doSave;
   }
+
+  bg.appendChild(modal);wrap.appendChild(bg);root.appendChild(wrap);
 }
 
 
