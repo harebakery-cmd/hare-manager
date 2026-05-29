@@ -74,15 +74,18 @@ body{font-family:var(--font-sans);color:var(--color-text-primary);font-size:15px
 .cal-nav button:active{background:var(--color-background-secondary)}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
 .cal-dow{font-size:11px;color:var(--color-text-secondary);text-align:center;padding:4px 0;font-weight:500}
-.cal-day{min-height:86px;border:0.5px solid var(--color-border-tertiary);border-radius:4px;padding:4px 3px;cursor:pointer;background:var(--color-background-primary);position:relative}
+.cal-day{height:110px;border:0.5px solid var(--color-border-tertiary);border-radius:4px;padding:4px 3px;cursor:pointer;background:var(--color-background-primary);position:relative;display:flex;flex-direction:column}
+.day-badges{flex:1;display:flex;flex-direction:column;gap:0;overflow:hidden;justify-content:space-between}
 .cal-day:active{background:var(--color-background-secondary)}
 .cal-day.empty{background:transparent;border-color:transparent;cursor:default}
 .cal-day.today{border-color:#C8844A;background:#FDF4EC}
-.day-num{font-size:11px;color:var(--color-text-secondary);margin-bottom:2px;text-align:center}
+.day-num{font-size:11px;color:var(--color-text-secondary);margin-bottom:2px;padding-left:2px;display:flex;align-items:flex-start;gap:2px;flex-wrap:nowrap;line-height:1.3}
+.day-num-digit{flex-shrink:0;font-size:11px;line-height:1.3}
 .cal-day.today .day-num{color:#7D4A1A;font-weight:500}
 .sun .day-num{color:#A32D2D!important}
 .sat .day-num{color:#185FA5!important}
-.day-badges{display:flex;flex-direction:column;gap:2px}
+.holiday .day-num{color:#A32D2D!important}
+.holiday-name{display:inline;font-size:8px;color:#A32D2D;font-weight:600;line-height:1.3;word-break:keep-all;overflow-wrap:break-word;min-width:0;flex:1}
 .dbadge{display:block;font-size:9px;padding:2px 3px;border-radius:3px;white-space:normal;overflow:visible;line-height:1.25}
 .dbadge-label{display:block;font-weight:700;opacity:.75;margin-bottom:1px}
 .dbadge-names{display:block;overflow:visible;text-overflow:clip;white-space:normal;word-break:keep-all}
@@ -95,6 +98,8 @@ body{font-family:var(--font-sans);color:var(--color-text-primary);font-size:15px
 .dbadge.half_pm{background:#EAE1F8;color:#4A2080}
 .dbadge.quarter{background:#F5EDF8;color:#6B35A0}
 
+.pos-mark{display:inline-block;font-size:9px;font-weight:800;color:#fff;background:#C8844A;border-radius:2px;padding:0 2px;margin-left:2px;line-height:1.3;vertical-align:middle}
+.dbadge-spacer{flex:1;min-height:0}
 .stats-wrap{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:12px;margin-bottom:12px}
 .stats-wrap h4{font-size:13px;font-weight:500;color:var(--color-text-secondary);margin-bottom:10px}
 .stats-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
@@ -156,7 +161,7 @@ body{font-family:var(--font-sans);color:var(--color-text-primary);font-size:15px
 
 .shift-section{margin-bottom:12px;border:1px solid #E6D8CA;border-radius:12px;background:#FBF6EF;padding:12px}
 .shift-title{font-size:13px;font-weight:700;color:#4B4037;margin-bottom:8px;padding-bottom:7px;border-bottom:1px solid #E6D8CA}
-.emp-btn-grid{display:flex;flex-wrap:wrap;gap:6px}
+.emp-btn-grid{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .emp-pick-btn{padding:9px 14px;font-size:14px;border:0.5px solid var(--color-border-secondary);border-radius:20px;cursor:pointer;background:transparent;color:var(--color-text-primary);min-height:44px}
 .emp-pick-btn:active{opacity:.7}
 .emp-pick-btn.sel-open{background:#EAF3DE;border-color:#639922;color:#27500A}
@@ -348,7 +353,30 @@ function displayNameWithShiftCount(sched,name,shift,dayKey){
   return `${calendarDisplayName(name)}${countShiftInMonth(sched,name,shift,dayKey)}`;
 }
 
-// ── Render Root ──────────────────────────────────────────
+// ── 대한민국 공휴일 ──────────────────────────────────────
+function getKoreanHolidays(year){
+  const h={};
+  const add=(m,d,name)=>{h[`${year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`]=name};
+  add(1,1,'신정');add(3,1,'삼일절');add(5,5,'어린이날');
+  add(6,6,'현충일');add(8,15,'광복절');add(10,3,'개천절');
+  add(10,9,'한글날');add(12,25,'성탄절');
+  // 석가탄신일 (음력 4월 15일 → 양력)
+  const buddhaMap={2024:'05-15',2025:'05-05',2026:'05-24',2027:'05-13',2028:'05-02',2029:'05-20'};
+  if(buddhaMap[year])h[`${year}-${buddhaMap[year]}`]='부처님오신날';
+  // 대체공휴일 (일요일·공휴일 겹침 시 다음 평일)
+  // 2026년 예시 추가 대체공휴일
+  const subMap={2025:{'01-27':'대체공휴일','05-06':'대체공휴일'},2026:{'03-02':'대체공휴일','06-08':'대체공휴일'},2027:{}};
+  if(subMap[year])Object.assign(h,subMap[year]);
+  // 설날 (음력 1월 1일 전후 3일)
+  const seolMap={2024:['02-09','02-10','02-11','02-12'],2025:['01-28','01-29','01-30','01-31'],2026:['02-17','02-18','02-19','02-20'],2027:['02-06','02-07','02-08','02-09'],2028:['01-26','01-27','01-28','01-29']};
+  if(seolMap[year]){const names=['설날연휴','설날','설날연휴','대체공휴일'];seolMap[year].forEach((d,i)=>{h[`${year}-${d}`]=names[i]||'설날연휴'});}
+  // 추석 (음력 8월 15일 전후 3일)
+  const chuseokMap={2024:['09-16','09-17','09-18'],2025:['10-05','10-06','10-07','10-08'],2026:['09-24','09-25','09-26','09-27'],2027:['10-14','10-15','10-16'],2028:['10-02','10-03','10-04']};
+  if(chuseokMap[year]){const names=['추석연휴','추석','추석연휴','대체공휴일'];chuseokMap[year].forEach((d,i)=>{h[`${year}-${d}`]=names[i]||'추석연휴'});}
+  return h;
+}
+
+
 function render(){
   const root=document.getElementById('app');
   root.innerHTML='';
@@ -605,33 +633,74 @@ function renderCalendar(parent,store){
   const daysInMonth=new Date(APP.calYear,APP.calMonth+1,0).getDate();
   const today=new Date();
   const sched=getSched(store.id,APP.activeSection,APP.calYear,APP.calMonth);
+  const holidays=getKoreanHolidays(APP.calYear);
 
   for(let i=0;i<firstDay;i++){const el=document.createElement('div');el.className='cal-day empty';grid.appendChild(el);}
 
   for(let d=1;d<=daysInMonth;d++){
     const dow=new Date(APP.calYear,APP.calMonth,d).getDay();
     const isToday=today.getFullYear()===APP.calYear&&today.getMonth()===APP.calMonth&&today.getDate()===d;
-    const cell=document.createElement('div');
-    cell.className='cal-day'+(isToday?' today':'')+(dow===0?' sun':'')+(dow===6?' sat':'');
-    const dn=document.createElement('div');dn.className='day-num';dn.textContent=d;cell.appendChild(dn);
-
     const dayKey=`${APP.calYear}-${String(APP.calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const holidayName=holidays[dayKey]||'';
+    const isHoliday=!!holidayName;
+    const cell=document.createElement('div');
+    cell.className='cal-day'+(isToday?' today':'')+(dow===0?' sun':'')+(dow===6?' sat':'')+(isHoliday&&dow!==0?' holiday':'');
+    const dn=document.createElement('div');dn.className='day-num';
+    const digit=document.createElement('span');digit.className='day-num-digit';digit.textContent=d;dn.appendChild(digit);
+    if(holidayName){const hn=document.createElement('span');hn.className='holiday-name';hn.textContent=holidayName;dn.appendChild(hn);}
+    cell.appendChild(dn);
+
     const dayData=sched[dayKey]||{};
     const byShift={오픈:[],미들:[],마감:[],휴무:[],연차:[],오전반차:[],오후반차:[],반반차:[]};
     Object.entries(dayData).forEach(([n,s])=>{if(byShift[s])byShift[s].push(n)});
 
     const badges=document.createElement('div');badges.className='day-badges';
-    // Show one row per main shift, with monthly sequence numbers beside names.
-    const shiftOrder=['오픈','미들','마감','휴무'];
-    let rowCount=0;
-    shiftOrder.forEach(sh=>{
-      if(!byShift[sh].length||rowCount>=4)return;
-      const names=byShift[sh];
-      const short=names.map(n=>displayNameWithShiftCount(sched,n,sh,dayKey)).join(' ');
-      const b=document.createElement('div');b.className=`dbadge ${SHIFT_CLS[sh]}`;
-      b.innerHTML=`<span class="dbadge-label">${sh}</span><span class="dbadge-names">${short}</span>`;
-      badges.appendChild(b);rowCount++;
-    });
+    // Fixed 4-row layout: 오픈 / 미들(or spacer) / 마감 / 휴무
+    // 오픈·마감: 이름만 표시 (포스자는 ★ 표기), 카운트 없음
+    // 미들: 이름 표시, 없으면 빈 공간
+    // 휴무: 이름+월누적횟수
+    const empsForDay=getEmps(store.id,APP.activeSection);
+    const posNames=new Set(empsForDay.filter(e=>e.isPos).map(e=>e.name));
+
+    // helper: render name with pos mark
+    function renderNameWithPos(name){
+      return posNames.has(name)?`${calendarDisplayName(name)}<span class="pos-mark">P</span>`:calendarDisplayName(name);
+    }
+
+    // 오픈/미들/마감/휴무: 있으면 badge, 없으면 spacer (높이 균등 분배)
+    // 오픈
+    if(byShift['오픈'].length){
+      const b=document.createElement('div');b.className=`dbadge ${SHIFT_CLS['오픈']}`;
+      b.innerHTML=`<span class="dbadge-label">오픈</span><span class="dbadge-names">${byShift['오픈'].map(n=>renderNameWithPos(n)).join(' ')}</span>`;
+      badges.appendChild(b);
+    } else {
+      badges.appendChild(Object.assign(document.createElement('div'),{className:'dbadge-spacer'}));
+    }
+    // 미들
+    if(byShift['미들'].length){
+      const b=document.createElement('div');b.className=`dbadge ${SHIFT_CLS['미들']}`;
+      b.innerHTML=`<span class="dbadge-label">미들</span><span class="dbadge-names">${byShift['미들'].map(n=>calendarDisplayName(n)).join(' ')}</span>`;
+      badges.appendChild(b);
+    } else {
+      badges.appendChild(Object.assign(document.createElement('div'),{className:'dbadge-spacer'}));
+    }
+    // 마감
+    if(byShift['마감'].length){
+      const b=document.createElement('div');b.className=`dbadge ${SHIFT_CLS['마감']}`;
+      b.innerHTML=`<span class="dbadge-label">마감</span><span class="dbadge-names">${byShift['마감'].map(n=>renderNameWithPos(n)).join(' ')}</span>`;
+      badges.appendChild(b);
+    } else {
+      badges.appendChild(Object.assign(document.createElement('div'),{className:'dbadge-spacer'}));
+    }
+    // 휴무 (이름+월누적 횟수)
+    if(byShift['휴무'].length){
+      const b=document.createElement('div');b.className=`dbadge ${SHIFT_CLS['휴무']}`;
+      const short=byShift['휴무'].map(n=>displayNameWithShiftCount(sched,n,'휴무',dayKey)).join(' ');
+      b.innerHTML=`<span class="dbadge-label">휴무</span><span class="dbadge-names">${short}</span>`;
+      badges.appendChild(b);
+    } else {
+      badges.appendChild(Object.assign(document.createElement('div'),{className:'dbadge-spacer'}));
+    }
     cell.appendChild(badges);
 
     const emps=getEmps(store.id,APP.activeSection);
@@ -759,10 +828,8 @@ function renderEmpSection(parent,store){
   const emps=getEmps(store.id,APP.activeSection);
   const sec=document.createElement('div');sec.className='emp-section';
   const toolbar=document.createElement('div');toolbar.className='emp-toolbar';
-  const h3=document.createElement('h3');h3.textContent=`${APP.activeSection} 직원`;
-  const addBtn=document.createElement('button');addBtn.className='btn-add';addBtn.textContent='+ 추가';
-  addBtn.onclick=()=>{APP.modal={type:'addEmp',storeId:store.id,section:APP.activeSection,form:{name:'',position:'',birthday:'',joinDate:'',type:'정규직'}};render()};
-  toolbar.appendChild(h3);toolbar.appendChild(addBtn);sec.appendChild(toolbar);
+  const h3=document.createElement('h3');h3.textContent=`${APP.activeSection} 직원 (${emps.length}명)`;
+  toolbar.appendChild(h3);sec.appendChild(toolbar);
 
   if(emps.length===0){
     const msg=document.createElement('div');msg.className='empty-msg';msg.textContent='등록된 직원이 없습니다.';sec.appendChild(msg);
@@ -772,35 +839,31 @@ function renderEmpSection(parent,store){
       const rem=Math.max(0,gen-used);
       const card=document.createElement('div');card.className='emp-card';
 
+      // Row1: 이름 + 직급 + 고용형태
       const row1=document.createElement('div');row1.className='emp-row1';
       const title=document.createElement('div');title.className='emp-title';
       const nm=document.createElement('span');nm.className='emp-name';nm.textContent=e.name;
+      if(e.isPos){const posBadge=document.createElement('span');posBadge.style.cssText='display:inline-block;font-size:9px;font-weight:800;color:#fff;background:#C8844A;border-radius:3px;padding:1px 4px;margin-left:4px;vertical-align:middle';posBadge.textContent='POS';nm.appendChild(posBadge);}
       title.appendChild(nm);
-      if(e.position){
-        const pos=document.createElement('span');pos.className='emp-position';pos.textContent=e.position;
-        title.appendChild(pos);
-      }
+      if(e.position){const pos=document.createElement('span');pos.className='emp-position';pos.textContent=e.position;title.appendChild(pos);}
       const badge=document.createElement('span');badge.className=`emp-badge ${e.type==='정규직'?'full':'part'}`;badge.textContent=e.type;
       row1.appendChild(title);row1.appendChild(badge);card.appendChild(row1);
 
+      // Row2: 입사일만 (간소화)
       const row2=document.createElement('div');row2.className='emp-row2';
-      [{l:'생일',v:e.birthday||'-'},{l:'입사일',v:e.joinDate||'-'}].forEach(({l,v})=>{
-        const it=document.createElement('div');it.className='emp-info-item';
-        it.innerHTML=`${l} <span>${v}</span>`;row2.appendChild(it);
-      });
+      const joinIt=document.createElement('div');joinIt.className='emp-info-item';
+      joinIt.innerHTML=`입사일 <span>${e.joinDate||'-'}</span>`;row2.appendChild(joinIt);
+      if(e.birthday){const bdIt=document.createElement('div');bdIt.className='emp-info-item';bdIt.innerHTML=`생일 <span>${e.birthday}</span>`;row2.appendChild(bdIt);}
       card.appendChild(row2);
 
+      // Row3: 연차 칩들 + 삭제
       const row3=document.createElement('div');row3.className='emp-row3';
-      [{l:'연차발생',v:gen+'일',edit:'gen'},{l:'사용수',v:used+'일',c:used>0?'#A32D2D':'',edit:'used'},{l:'잔여수량',v:rem+'일',c:rem>5?'#27500A':rem>0?'#633806':'#5F5E5A'}].forEach(({l,v,c,edit})=>{
+      [{l:'연차발생',v:gen+'일',edit:'gen'},{l:'사용수',v:used+'일',c:used>0?'#A32D2D':'',edit:'used'},{l:'잔여',v:rem+'일',c:rem>5?'#27500A':rem>0?'#633806':'#5F5E5A'}].forEach(({l,v,c,edit})=>{
         const chip=document.createElement('div');chip.className='annual-chip';
         chip.innerHTML=`<div class="ac-label">${l}</div><div class="ac-val"${c?` style="color:${c}"`:''} >${v}</div>`;
         if(edit){
           chip.className+=' editable';
-          const editBtn=document.createElement('button');
-          editBtn.className='btn-annual-edit';
-          editBtn.type='button';
-          editBtn.title=`${l} 수정`;
-          editBtn.textContent='✎';
+          const editBtn=document.createElement('button');editBtn.className='btn-annual-edit';editBtn.type='button';editBtn.title=`${l} 수정`;editBtn.textContent='✎';
           editBtn.onclick=()=>{APP.modal={type:'editAnnual',target:edit,storeId:store.id,section:APP.activeSection,empIndex:idx,form:{annualManual:e.annualManual??gen,annualUsedManual:e.annualUsedManual??used}};render()};
           chip.appendChild(editBtn);
         }
@@ -813,6 +876,11 @@ function renderEmpSection(parent,store){
       sec.appendChild(card);
     });
   }
+
+  // + 추가 버튼 → 마지막 직원 아래에 위치
+  const addBtn=document.createElement('button');addBtn.className='btn-add';addBtn.style.cssText='width:100%;margin-top:10px';addBtn.textContent='+ 직원 추가';
+  addBtn.onclick=()=>{APP.modal={type:'addEmp',storeId:store.id,section:APP.activeSection,form:{name:'',position:'',birthday:'',joinDate:'',type:'정규직',isPos:false}};render()};
+  sec.appendChild(addBtn);
 
   const note=document.createElement('p');note.className='emp-note';
   note.textContent='매장: 월 8회 휴무 | 8시간 근무, 1시간 휴게 | 연차: 1년 만근 후 15개 발생 | 반차=0.5일, 반반차=0.25일 차감';
@@ -913,18 +981,25 @@ function renderModal(root){
     });
 
     [
-      {label:'☀️ 오픈 근무자',key:'오픈',cls:'sel-open'},
-      {label:'🌤 미들 근무자',key:'미들',cls:'sel-mid'},
-      {label:'🌙 마감 근무자',key:'마감',cls:'sel-close'},
-      {label:'🏖 휴무자',key:'휴무',cls:'sel-off'},
-      {label:'📅 연차 사용자',key:'연차',cls:'sel-annual'},
-      {label:'🌅 오전 반차',key:'오전반차',cls:'sel-half_am'},
-      {label:'🌆 오후 반차',key:'오후반차',cls:'sel-half_pm'},
-      {label:'⏱ 반반차 (¼일)',key:'반반차',cls:'sel-quarter'},
+      {label:'☀️ 오픈 근무자',key:'오픈',cls:'sel-open',open:true},
+      {label:'🌤 미들 근무자',key:'미들',cls:'sel-mid',open:true},
+      {label:'🌙 마감 근무자',key:'마감',cls:'sel-close',open:true},
+      {label:'🏖 휴무자',key:'휴무',cls:'sel-off',open:true},
+      {label:'📅 연차 사용자',key:'연차',cls:'sel-annual',open:false},
+      {label:'🌅 오전 반차',key:'오전반차',cls:'sel-half_am',open:false},
+      {label:'🌆 오후 반차',key:'오후반차',cls:'sel-half_pm',open:false},
+      {label:'⏱ 반반차 (¼일)',key:'반반차',cls:'sel-quarter',open:false},
     ].forEach(sg=>{
       const sec=document.createElement('div');sec.className='shift-section';
-      const title=document.createElement('div');title.className='shift-title';title.textContent=sg.label;sec.appendChild(title);
+      const titleRow=document.createElement('div');titleRow.className='shift-title';
+      titleRow.style.cssText='cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none';
+      const titleText=document.createElement('span');titleText.textContent=sg.label;titleRow.appendChild(titleText);
+      const arrow=document.createElement('span');arrow.textContent=sg.open?'▲':'▼';arrow.style.cssText='font-size:10px;opacity:.5';titleRow.appendChild(arrow);
+      sec.appendChild(titleRow);
       const btnGrid=document.createElement('div');btnGrid.className='emp-btn-grid';
+      if(!sg.open)btnGrid.style.display='none';
+      let isOpen=sg.open;
+      titleRow.onclick=()=>{isOpen=!isOpen;btnGrid.style.display=isOpen?'flex':'none';arrow.textContent=isOpen?'▲':'▼';};
       emps.forEach(e=>{
         const cur=dayData[e.name];
         const b=document.createElement('button');
@@ -936,10 +1011,11 @@ function renderModal(root){
         else if(sg.key==='마감')countThisShift=empCloseCount[e.name]||0;
         else if(sg.key==='휴무')countThisShift=empOffCount[e.name]||0;
         // 선택 시 +1 예상
-        const numberedShifts=['오픈','미들','마감','휴무'];
-        const preview=cur===sg.key?countThisShift+1:countThisShift+(numberedShifts.includes(sg.key)?1:0);
-        if(numberedShifts.includes(sg.key)){
-          b.innerHTML=`${e.name}<sup style="font-size:9px;margin-left:2px;opacity:.7">${preview}</sup>`;
+        // 휴무만 누적 카운트 표시, 나머지는 이름만
+        if(sg.key==='휴무'){
+          const preview=cur===sg.key?(countThisShift+1):(countThisShift+1);
+          const displayCount=cur===sg.key?(countThisShift+1):(countThisShift+1);
+          b.innerHTML=`${e.name}<sup style="font-size:9px;margin-left:2px;opacity:.7">${displayCount}</sup>`;
         } else {
           b.textContent=e.name;
         }
@@ -948,7 +1024,28 @@ function renderModal(root){
           if(dayData[e.name]===undefined)delete dayData[e.name];
           save();APP.modal={...m};render();
         };
-        btnGrid.appendChild(b);
+        // POS 담당자 토글 버튼 (오픈, 마감에만)
+        if(sg.key==='오픈'||sg.key==='마감'){
+          const wrapper=document.createElement('div');wrapper.style.cssText='display:inline-flex;align-items:center;gap:2px;flex-shrink:0';
+          wrapper.appendChild(b);
+          const posBtn=document.createElement('button');
+          posBtn.type='button';
+          posBtn.title='포스 담당자로 지정';
+          const isCurrentPos=e.isPos;
+          posBtn.style.cssText=`padding:5px 7px;font-size:11px;font-weight:700;border:1px solid ${isCurrentPos?'#C8844A':'#D8C9BA'};border-radius:14px;cursor:pointer;background:${isCurrentPos?'#F5EDE3':'transparent'};color:${isCurrentPos?'#7D4A1A':'var(--color-text-secondary)'};min-height:36px;white-space:nowrap`;
+          posBtn.textContent=isCurrentPos?'P ✓':'P';
+          posBtn.onclick=(ev)=>{
+            ev.stopPropagation();
+            const empsArr=getEmps(m.storeId,m.section);
+            const empIdx=empsArr.findIndex(emp=>emp.name===e.name);
+            if(empIdx>=0){empsArr[empIdx].isPos=!empsArr[empIdx].isPos;setEmps(m.storeId,m.section,empsArr);}
+            save();APP.modal={...m};render();
+          };
+          wrapper.appendChild(posBtn);
+          btnGrid.appendChild(wrapper);
+        } else {
+          btnGrid.appendChild(b);
+        }
       });
       sec.appendChild(btnGrid);modal.appendChild(sec);
     });
@@ -1003,6 +1100,7 @@ function renderModal(root){
         <option value="정규직" ${m.form.type==='정규직'?'selected':''}>정규직</option>
         <option value="일용직" ${m.form.type==='일용직'?'selected':''}>일용직</option>
       </select></div>
+      <div class="form-row" style="display:flex;align-items:center;gap:10px"><label style="margin-bottom:0">포스(POS)담당자</label><input id="fi-pos" type="checkbox" style="width:20px;height:20px;min-height:0;cursor:pointer" ${m.form.isPos?'checked':''}></div>
     </div>
     <div class="modal-btns">
       <button class="btn-cancel" id="mb-c">취소</button>
@@ -1013,6 +1111,7 @@ function renderModal(root){
     wireDateFields('fi-bday',modal,(value)=>{m.form.birthday=value});
     wireDateFields('fi-join',modal,(value)=>{m.form.joinDate=value});
     modal.querySelector('#fi-type').onchange=(e)=>{m.form.type=e.target.value};
+    modal.querySelector('#fi-pos').onchange=(e)=>{m.form.isPos=e.target.checked};
     modal.querySelector('#mb-c').onclick=()=>{APP.modal=null;render()};
     modal.querySelector('#mb-a').onclick=()=>{
       const name=modal.querySelector('#fi-name').value.trim();
@@ -1023,7 +1122,8 @@ function renderModal(root){
       if(!name){alert('직원명을 입력해주세요.');return;}
       if(!joinDate){alert('입사일을 입력해주세요.');return;}
       const emps=getEmps(m.storeId,m.section);
-      emps.push({name,position,birthday,joinDate,type});
+      const isPos=modal.querySelector('#fi-pos').checked;
+      emps.push({name,position,birthday,joinDate,type,isPos});
       setEmps(m.storeId,m.section,emps);
       APP.modal=null;save();render();
     };
