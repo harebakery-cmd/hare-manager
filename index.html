@@ -902,6 +902,8 @@ function renderEmpSection(parent,store){
     });
   }
 
+  sec.appendChild(empBody);
+
   // + 추가 버튼 → 마지막 직원 아래에 위치
   const addBtn=document.createElement('button');addBtn.className='btn-add';addBtn.style.cssText='width:100%;margin-top:10px';addBtn.textContent='+ 직원 추가';
   addBtn.onclick=()=>{APP.modal={type:'addEmp',storeId:store.id,section:APP.activeSection,form:{name:'',position:'',birthday:'',joinDate:'',type:'정규직'}};render()};
