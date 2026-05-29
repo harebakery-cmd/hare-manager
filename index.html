@@ -36,14 +36,11 @@ body{font-family:var(--font-sans);color:var(--color-text-primary);font-size:15px
 .sec-btn:active{opacity:.7}
 
 
-/* ── Excel & Image Download ── */
-.dl-wrap{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-bottom:8px}
+/* ── Excel Download ── */
+.dl-wrap{display:flex;align-items:center;justify-content:flex-end;margin-bottom:8px}
 .btn-excel{display:flex;align-items:center;gap:4px;padding:6px 9px;font-size:11px;font-weight:600;border:1px solid #1D6F2B;border-radius:8px;cursor:pointer;background:#E8F5EA;color:#1D6F2B;min-height:30px}
 .btn-excel:active{opacity:.7}
 .btn-excel svg{width:13px;height:13px;flex-shrink:0}
-.btn-imgdl{display:flex;align-items:center;gap:4px;padding:6px 9px;font-size:11px;font-weight:600;border:1px solid #185FA5;border-radius:8px;cursor:pointer;background:#E8F0FB;color:#185FA5;min-height:30px}
-.btn-imgdl:active{opacity:.7}
-.btn-imgdl svg{width:13px;height:13px;flex-shrink:0}
 
 /* ── Home screen ── */
 .home-wrap{padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 80px)}
@@ -239,7 +236,6 @@ body{font-family:var(--font-sans);color:var(--color-text-primary);font-size:15px
 </style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <div class="app" id="app"></div>
 
 <script>
@@ -250,6 +246,9 @@ const SHIFT_CLS={오픈:'open',미들:'mid',마감:'close',휴무:'off',연차:'
 const SHIFT_LABELS={오픈:'오픈',미들:'미들',마감:'마감',휴무:'휴무',연차:'연차',오전반차:'오전반차',오후반차:'오후반차',반반차:'반반차(¼)'};
 // 반차는 0.5일, 반반차는 0.25일로 연차 계산
 const SHIFT_ANNUAL_WEIGHT={연차:1,오전반차:0.5,오후반차:0.5,반반차:0.25};
+// 연장 근무 시간 키: '__ot__이름' → 시간 수 (숫자)
+function otKey(name){return '__ot__'+name;}
+function getOT(dayData,name){const v=dayData[otKey(name)];return(v&&v>0)?v:0;}
 const SECTIONS_ALL=['매장','공장'];
 
 // Logo images (base64 encoded from uploaded files)
@@ -505,10 +504,6 @@ function renderScheduleView(parent){
   const dlBtn=document.createElement('button');dlBtn.className='btn-excel';
   dlBtn.innerHTML=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>${APP.calYear}년 ${APP.calMonth+1}월 엑셀 다운로드`;
   dlBtn.onclick=()=>exportExcel();
-  const imgBtn=document.createElement('button');imgBtn.className='btn-imgdl';
-  imgBtn.innerHTML=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>달력 이미지 저장`;
-  imgBtn.onclick=()=>exportCalendarImage(store);
-  dlWrap.appendChild(imgBtn);
   dlWrap.appendChild(dlBtn);
   content.appendChild(dlWrap);
 
@@ -695,9 +690,11 @@ function renderCalendar(parent,store){
     // 날짜별 POS 담당자: dayData['__pos__이름'] = true
     const posNames=new Set(Object.keys(dayData||{}).filter(k=>k.startsWith('__pos__')).map(k=>k.slice(7)));
 
-    // helper: render name with pos mark
+    // helper: render name with pos mark and overtime
     function renderNameWithPos(name){
-      return posNames.has(name)?`${calendarDisplayName(name)}<span class="pos-mark">P</span>`:calendarDisplayName(name);
+      const ot=getOT(dayData,name);
+      const otStr=ot>0?`<span style="font-size:8px;font-weight:700;color:#185FA5;margin-left:1px">+${ot}h</span>`:'';
+      return posNames.has(name)?`${calendarDisplayName(name)}<span class="pos-mark">P</span>${otStr}`:calendarDisplayName(name)+otStr;
     }
 
     // 오픈/미들/마감/휴무: 있으면 badge, 없으면 spacer (높이 균등 분배)
@@ -710,7 +707,7 @@ function renderCalendar(parent,store){
     // 미들
     if(byShift['미들'].length){
       const b=document.createElement('div');b.className=`dbadge ${SHIFT_CLS['미들']}`;
-      b.innerHTML=`<span class="dbadge-label">미들</span><span class="dbadge-names">${byShift['미들'].map(n=>calendarDisplayName(n)).join(' ')}</span>`;
+      b.innerHTML=`<span class="dbadge-label">미들</span><span class="dbadge-names">${byShift['미들'].map(n=>{const ot=getOT(dayData,n);return calendarDisplayName(n)+(ot>0?`<span style="font-size:8px;font-weight:700;color:#185FA5;margin-left:1px">+${ot}h</span>`:'');}).join(' ')}</span>`;
       badges.appendChild(b);
     }
     // 마감
@@ -743,15 +740,17 @@ function renderStats(parent,store){
   const emps=getEmps(store.id,APP.activeSection);
   const sched=getSched(store.id,APP.activeSection,APP.calYear,APP.calMonth);
   // per-employee counters
-  const openMap={},midMap={},closeMap={},offMap={},annualMap={},halfMap={};
-  emps.forEach(e=>{openMap[e.name]=0;midMap[e.name]=0;closeMap[e.name]=0;offMap[e.name]=0;annualMap[e.name]=0;halfMap[e.name]=0});
-  Object.values(sched).forEach(day=>Object.entries(day).forEach(([n,s])=>{
+  const openMap={},midMap={},closeMap={},offMap={},annualMap={},halfMap={},otMap={};
+  emps.forEach(e=>{openMap[e.name]=0;midMap[e.name]=0;closeMap[e.name]=0;offMap[e.name]=0;annualMap[e.name]=0;halfMap[e.name]=0;otMap[e.name]=0;});
+  Object.entries(sched).forEach(([dk,day])=>Object.entries(day).forEach(([n,s])=>{
     if(s==='오픈')openMap[n]=(openMap[n]||0)+1;
     else if(s==='미들')midMap[n]=(midMap[n]||0)+1;
     else if(s==='마감')closeMap[n]=(closeMap[n]||0)+1;
     else if(s==='휴무')offMap[n]=(offMap[n]||0)+1;
     else if(s==='연차')annualMap[n]=(annualMap[n]||0)+1;
     else if(['오전반차','오후반차','반반차'].includes(s))halfMap[n]=(halfMap[n]||0)+1;
+    // 연장 시간 집계
+    if(n.startsWith('__ot__')){const empName=n.slice(6);if(otMap[empName]!==undefined)otMap[empName]=Math.round(((otMap[empName]||0)+Number(s))*10)/10;}
   }));
 
   const wrap=document.createElement('div');wrap.className='stats-wrap';
@@ -775,7 +774,7 @@ function renderStats(parent,store){
   // header
   const thead=document.createElement('thead');
   const hrow=document.createElement('tr');
-  ['이름','오픈','미들','마감','휴무'].forEach((h,i)=>{
+  ['이름','오픈','미들','마감','휴무','연장h'].forEach((h,i)=>{
     const th=document.createElement('th');
     th.textContent=h;
     th.style.cssText=`padding:6px 4px;text-align:center;border-bottom:1.5px solid var(--color-border-secondary);font-weight:600;color:var(--color-text-secondary);font-size:11px;white-space:nowrap;background:var(--color-background-secondary);${i===0?'text-align:left;padding-left:8px;':''}`;
@@ -787,7 +786,7 @@ function renderStats(parent,store){
   if(emps.length===0){
     const tr=document.createElement('tr');
     const td=document.createElement('td');
-    td.colSpan=5;
+    td.colSpan=6;
     td.textContent='등록된 직원이 없습니다.';
     td.style.cssText='padding:10px 8px;text-align:center;font-size:12px;color:var(--color-text-secondary);background:var(--color-background-secondary)';
     tr.appendChild(td);
@@ -803,6 +802,7 @@ function renderStats(parent,store){
       {v:midMap[e.name]||0,color:'#085041',bg:'#E1F5EE'},
       {v:closeMap[e.name]||0,color:'#3C3489',bg:'#EEEDFE'},
       {v:offMap[e.name]||0,color:offMap[e.name]>=8?'#A32D2D':'#712B13',bg:'#FAECE7'},
+      {v:(otMap[e.name]||0)>0?`+${otMap[e.name]}h`:'0h',color:(otMap[e.name]||0)>0?'#185FA5':'var(--color-text-secondary)',bg:(otMap[e.name]||0)>0?'#E8F0FB':null},
     ];
     vals.forEach((cell,ci)=>{
       const td=document.createElement('td');
@@ -1159,6 +1159,62 @@ function renderModal(root){
       sec.appendChild(btnGrid);modal.appendChild(sec);
     });
 
+    // ── 연장 근무 입력 섹션 ──────────────────────────────
+    const otSec=document.createElement('div');otSec.className='shift-section';
+    const otTitle=document.createElement('div');otTitle.className='shift-title';
+    otTitle.style.cssText='cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none';
+    const otTitleText=document.createElement('span');otTitleText.textContent='⏱ 연장 근무 시간';otTitle.appendChild(otTitleText);
+    const otArrow=document.createElement('span');otArrow.textContent='▼';otArrow.style.cssText='font-size:10px;opacity:.5';otTitle.appendChild(otArrow);
+    otSec.appendChild(otTitle);
+    const otBody=document.createElement('div');otBody.style.display='none';
+    let otOpen=false;
+    otTitle.onclick=()=>{otOpen=!otOpen;otBody.style.display=otOpen?'block':'none';otArrow.textContent=otOpen?'▲':'▼';};
+    // 근무자만 표시 (오픈/미들/마감 배정된 직원)
+    const workShifts=['오픈','미들','마감'];
+    const workerEmps=emps.filter(e=>workShifts.includes(dayData[e.name]));
+    if(workerEmps.length===0){
+      const noWorker=document.createElement('div');noWorker.style.cssText='font-size:12px;color:var(--color-text-secondary);padding:6px 2px';
+      noWorker.textContent='오픈·미들·마감 근무자를 먼저 배정해주세요.';otBody.appendChild(noWorker);
+    } else {
+      workerEmps.forEach(e=>{
+        const curOt=getOT(dayData,e.name);
+        const row=document.createElement('div');
+        row.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:8px';
+        const nameLbl=document.createElement('span');
+        nameLbl.style.cssText='font-size:13px;font-weight:600;min-width:60px;color:var(--color-text-primary)';
+        nameLbl.textContent=e.name;
+        row.appendChild(nameLbl);
+        // - 버튼
+        const minusBtn=document.createElement('button');
+        minusBtn.type='button';
+        minusBtn.textContent='−';
+        minusBtn.style.cssText='width:32px;height:32px;border:1px solid #D8C9BA;border-radius:8px;background:#fff;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center';
+        // 시간 표시
+        const otDisp=document.createElement('span');
+        otDisp.style.cssText='min-width:44px;text-align:center;font-size:14px;font-weight:600;color:#185FA5';
+        otDisp.textContent=curOt>0?`+${curOt}h`:'0h';
+        // + 버튼
+        const plusBtn=document.createElement('button');
+        plusBtn.type='button';
+        plusBtn.textContent='+';
+        plusBtn.style.cssText='width:32px;height:32px;border:1px solid #D8C9BA;border-radius:8px;background:#fff;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center';
+        // 현재 값 추적
+        let val=curOt;
+        const update=()=>{
+          otDisp.textContent=val>0?`+${val}h`:'0h';
+          otDisp.style.color=val>0?'#185FA5':'var(--color-text-secondary)';
+          if(val>0)dayData[otKey(e.name)]=val;
+          else delete dayData[otKey(e.name)];
+          save();
+        };
+        minusBtn.onclick=()=>{if(val>=0.5){val=Math.round((val-0.5)*10)/10;update();}};
+        plusBtn.onclick=()=>{val=Math.round((val+0.5)*10)/10;update();};
+        row.appendChild(minusBtn);row.appendChild(otDisp);row.appendChild(plusBtn);
+        otBody.appendChild(row);
+      });
+    }
+    otSec.appendChild(otBody);modal.appendChild(otSec);
+
     const closeBtn=document.createElement('button');closeBtn.className='close-btn';closeBtn.textContent='닫기';
     closeBtn.onclick=()=>{APP.modal=null;save();render()};modal.appendChild(closeBtn);
   } else if(m.type==='editAnnual'){
@@ -1262,49 +1318,6 @@ function renderModal(root){
 }
 
 
-function exportCalendarImage(store){
-  // 달력 영역 찾기
-  const calEl=document.querySelector('.cal-wrap');
-  if(!calEl){alert('달력을 찾을 수 없습니다.');return;}
-  const storeName=store?store.name:'';
-  const sec=APP.activeSection||'';
-  const y=APP.calYear, m=APP.calMonth+1;
-  const fileName=`${storeName}_${sec}_${y}년${m}월_달력.png`;
-
-  // 버튼 일시적으로 숨기기
-  const imgBtn=document.querySelector('.btn-imgdl');
-  const excelBtn=document.querySelector('.btn-excel');
-  if(imgBtn)imgBtn.style.display='none';
-  if(excelBtn)excelBtn.style.display='none';
-
-  // 제목 임시 레이블 추가
-  const headerEl=calEl.querySelector('.cal-header h3');
-  const origTitle=headerEl?headerEl.textContent:'';
-  if(headerEl)headerEl.textContent=`${storeName} ${sec} | ${y}년 ${m}월 달력`;
-
-  html2canvas(calEl,{
-    scale:2,
-    useCORS:true,
-    backgroundColor:'#ffffff',
-    logging:false
-  }).then(canvas=>{
-    // 원상 복구
-    if(headerEl)headerEl.textContent=origTitle;
-    if(imgBtn)imgBtn.style.display='';
-    if(excelBtn)excelBtn.style.display='';
-    // 다운로드
-    const link=document.createElement('a');
-    link.download=fileName;
-    link.href=canvas.toDataURL('image/png');
-    link.click();
-  }).catch(err=>{
-    if(headerEl)headerEl.textContent=origTitle;
-    if(imgBtn)imgBtn.style.display='';
-    if(excelBtn)excelBtn.style.display='';
-    alert('이미지 저장에 실패했습니다: '+err.message);
-  });
-}
-
 function exportExcel(){
   const store=getStore();
   if(!store){alert('점포를 선택해주세요.');return;}
@@ -1325,25 +1338,29 @@ function exportExcel(){
       const dow=new Date(y,m,d).getDay();
       dateHeaders.push(`${d}일(${DOWS_KR[dow]})`);
     }
-    const headers=['직원명','고용형태','입사일',...dateHeaders,'근무일수','휴무수','연차사용','반차수','잔여연차'];
+    const headers=['직원명','고용형태','입사일',...dateHeaders,'근무일수','휴무수','연차사용','반차수','연장(h)','잔여연차'];
     const rows=[headers];
 
     emps.forEach(e=>{
       const row=[e.name, e.type, e.joinDate||''];
-      let workCnt=0,offCnt=0,annualUsed=0,halfCnt=0;
+      let workCnt=0,offCnt=0,annualUsed=0,halfCnt=0,otTotal=0;
       for(let d=1;d<=daysInMonth;d++){
         const dk=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        const sh=(sched[dk]||{})[e.name]||'';
+        const dayD=sched[dk]||{};
+        const sh=dayD[e.name]||'';
+        const ot=getOT(dayD,e.name);
         const LABELS={오픈:'오픈',미들:'미들',마감:'마감',휴무:'휴무',연차:'연차',오전반차:'오전반차',오후반차:'오후반차',반반차:'반반차'};
-        row.push(LABELS[sh]||'');
+        const shLabel=LABELS[sh]||(sh?sh:'');
+        row.push(ot>0?`${shLabel||''}(+${ot}h)`:shLabel);
         if(['오픈','미들','마감'].includes(sh))workCnt++;
         else if(sh==='휴무')offCnt++;
         else if(sh==='연차')annualUsed++;
         else if(['오전반차','오후반차','반반차'].includes(sh))halfCnt++;
+        otTotal=Math.round((otTotal+ot)*10)/10;
       }
       const {gen,used}=calcAnnual(e,store.id,sec,y,m);
       const rem=Math.max(0,gen-used);
-      row.push(workCnt,offCnt,used,halfCnt,rem);
+      row.push(workCnt,offCnt,used,halfCnt,otTotal,rem);
       rows.push(row);
     });
 
@@ -1355,13 +1372,13 @@ function exportExcel(){
       const working=emps.filter(e=>['오픈','미들','마감'].includes(dayData[e.name])).length;
       sumRow.push(`근무${working}명`);
     }
-    sumRow.push('','','','','');
+    sumRow.push('','','','','','');
     rows.push(sumRow);
 
     const ws=XLSX.utils.aoa_to_sheet(rows);
 
     // Column widths
-    ws['!cols']=[{wch:10},{wch:8},{wch:12},...Array(daysInMonth).fill({wch:9}),{wch:8},{wch:7},{wch:8},{wch:7},{wch:8}];
+    ws['!cols']=[{wch:10},{wch:8},{wch:12},...Array(daysInMonth).fill({wch:9}),{wch:8},{wch:7},{wch:8},{wch:7},{wch:8},{wch:8}];
 
     // Freeze first row + first col
     ws['!freeze']={xSplit:3,ySplit:1,topLeftCell:'D2',activePane:'bottomRight'};
@@ -1370,28 +1387,30 @@ function exportExcel(){
   });
 
   // Summary sheet across all stores
-  const sumRows=[['점포','구역','직원수','총근무일','총휴무','총연차','총반차']];
+  const sumRows=[['점포','구역','직원수','총근무일','총휴무','총연차','총반차','총연장(h)']];
   APP.stores.forEach(st=>{
     st.sections.forEach(sec=>{
       const emps=getEmps(st.id,sec);
       const sched=getSched(st.id,sec,y,m);
       const daysInMonth=new Date(y,m+1,0).getDate();
-      let totalWork=0,totalOff=0,totalAnn=0,totalHalf=0;
+      let totalWork=0,totalOff=0,totalAnn=0,totalHalf=0,totalOt=0;
       emps.forEach(e=>{
         for(let d=1;d<=daysInMonth;d++){
           const dk=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-          const sh=(sched[dk]||{})[e.name]||'';
+          const dayD=sched[dk]||{};
+          const sh=dayD[e.name]||'';
           if(['오픈','미들','마감'].includes(sh))totalWork++;
           else if(sh==='휴무')totalOff++;
           else if(sh==='연차')totalAnn++;
           else if(['오전반차','오후반차','반반차'].includes(sh))totalHalf++;
+          totalOt=Math.round((totalOt+getOT(dayD,e.name))*10)/10;
         }
       });
-      sumRows.push([st.name,sec,emps.length,totalWork,totalOff,totalAnn,totalHalf]);
+      sumRows.push([st.name,sec,emps.length,totalWork,totalOff,totalAnn,totalHalf,totalOt]);
     });
   });
   const sumWs=XLSX.utils.aoa_to_sheet(sumRows);
-  sumWs['!cols']=[{wch:12},{wch:8},{wch:8},{wch:10},{wch:8},{wch:8},{wch:8}];
+  sumWs['!cols']=[{wch:12},{wch:8},{wch:8},{wch:10},{wch:8},{wch:8},{wch:8},{wch:10}];
   XLSX.utils.book_append_sheet(wb,sumWs,'전체요약');
 
   const fileName=`${store.name}_${y}년${m+1}월_스케줄.xlsx`;
