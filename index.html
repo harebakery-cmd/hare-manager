@@ -733,7 +733,6 @@ function renderCalendar(parent,store){
 
 function renderStats(parent,store){
   const emps=getEmps(store.id,APP.activeSection);
-  if(emps.length===0)return;
   const sched=getSched(store.id,APP.activeSection,APP.calYear,APP.calMonth);
   // per-employee counters
   const openMap={},midMap={},closeMap={},offMap={},annualMap={},halfMap={};
@@ -754,7 +753,7 @@ function renderStats(parent,store){
   const isStatsOpen=!!APP._toggles[toggleKey];
   const h4=document.createElement('div');
   h4.style.cssText='display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:2px 0;user-select:none';
-  h4.innerHTML=`<span style="font-size:13px;font-weight:500;color:var(--color-text-secondary)">${APP.calYear}년 ${APP.calMonth+1}월 현황</span><span style="font-size:11px;color:var(--color-text-secondary)">${isStatsOpen?'▲':'▼'}</span>`;
+  h4.innerHTML=`<span style="font-size:13px;font-weight:500;color:var(--color-text-secondary)">${APP.calYear}년 ${APP.calMonth+1}월 월별 현황</span><span style="font-size:11px;color:var(--color-text-secondary)">${isStatsOpen?'▲':'▼'}</span>`;
   wrap.appendChild(h4);
   const statsBody=document.createElement('div');
   statsBody.style.display=isStatsOpen?'block':'none';
@@ -777,6 +776,16 @@ function renderStats(parent,store){
   thead.appendChild(hrow);table.appendChild(thead);
 
   const tbody=document.createElement('tbody');
+  if(emps.length===0){
+    const tr=document.createElement('tr');
+    const td=document.createElement('td');
+    td.colSpan=5;
+    td.textContent='등록된 직원이 없습니다.';
+    td.style.cssText='padding:10px 8px;text-align:center;font-size:12px;color:var(--color-text-secondary);background:var(--color-background-secondary)';
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+  }
+
   emps.forEach((e,idx)=>{
     const tr=document.createElement('tr');
     tr.style.background=idx%2===0?'var(--color-background-primary)':'var(--color-background-secondary)';
@@ -804,6 +813,72 @@ function renderStats(parent,store){
 
   table.appendChild(tbody);
   tbl.appendChild(table);statsBody.appendChild(tbl);
+
+  const leaveDetails=[];
+  const empNames=new Set(emps.map(e=>e.name));
+  Object.keys(sched).sort().forEach(dayKey=>{
+    const day=sched[dayKey]||{};
+    Object.entries(day).forEach(([name,shift])=>{
+      if(!empNames.has(name)||!SHIFT_ANNUAL_WEIGHT[shift])return;
+      leaveDetails.push({
+        name,
+        dayKey,
+        used:SHIFT_ANNUAL_WEIGHT[shift],
+        reason:SHIFT_LABELS[shift]||shift
+      });
+    });
+  });
+
+  const detailWrap=document.createElement('div');
+  detailWrap.style.cssText='width:100%;overflow-x:auto;margin-top:14px';
+  const detailTitle=document.createElement('div');
+  detailTitle.textContent='연차 사용 세부정보';
+  detailTitle.style.cssText='font-size:12px;font-weight:600;color:var(--color-text-secondary);margin:0 0 8px 2px';
+  detailWrap.appendChild(detailTitle);
+
+  if(leaveDetails.length===0){
+    const empty=document.createElement('div');
+    empty.textContent='등록된 연차/반차/반반차 사용 내역이 없습니다.';
+    empty.style.cssText='padding:10px 8px;border-radius:8px;background:var(--color-background-secondary);font-size:12px;color:var(--color-text-secondary);text-align:center';
+    detailWrap.appendChild(empty);
+  } else {
+    const detailTable=document.createElement('table');
+    detailTable.style.cssText='width:100%;border-collapse:collapse;font-size:12px;min-width:420px';
+    const detailHead=document.createElement('thead');
+    const detailHeadRow=document.createElement('tr');
+    ['직원이름','일자','사용일수','사유'].forEach((h,i)=>{
+      const th=document.createElement('th');
+      th.textContent=h;
+      th.style.cssText=`padding:6px 4px;text-align:center;border-bottom:1.5px solid var(--color-border-secondary);font-weight:600;color:var(--color-text-secondary);font-size:11px;white-space:nowrap;background:var(--color-background-secondary);${i===0?'text-align:left;padding-left:8px;':''}`;
+      detailHeadRow.appendChild(th);
+    });
+    detailHead.appendChild(detailHeadRow);detailTable.appendChild(detailHead);
+
+    const detailBody=document.createElement('tbody');
+    leaveDetails.forEach((item,idx)=>{
+      const tr=document.createElement('tr');
+      tr.style.background=idx%2===0?'var(--color-background-primary)':'var(--color-background-secondary)';
+      [
+        {v:item.name,align:'left',bold:true,color:'var(--color-text-primary)'},
+        {v:item.dayKey,color:'var(--color-text-secondary)'},
+        {v:item.used+'일',color:item.used>=1?'#A32D2D':'#633806'},
+        {v:item.reason,color:item.reason.includes('연차')?'#A32D2D':item.reason.includes('반반차')?'#633806':'#7D4A1A'}
+      ].forEach((cell,ci)=>{
+        const td=document.createElement('td');
+        td.textContent=cell.v;
+        let css='padding:6px 4px;text-align:center;font-size:12px;white-space:nowrap;';
+        if(cell.align==='left')css+='text-align:left;padding-left:8px;';
+        if(cell.bold)css+='font-weight:600;';
+        if(cell.color)css+=`color:${cell.color};`;
+        td.style.cssText=css;
+        tr.appendChild(td);
+      });
+      detailBody.appendChild(tr);
+    });
+    detailTable.appendChild(detailBody);
+    detailWrap.appendChild(detailTable);
+  }
+  statsBody.appendChild(detailWrap);
   wrap.appendChild(statsBody);
   parent.appendChild(wrap);
 }
