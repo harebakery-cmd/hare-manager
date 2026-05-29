@@ -176,7 +176,27 @@ body{font-family:var(--font-sans);color:var(--color-text-primary);font-size:15px
 .form-row{margin-bottom:12px}
 .form-row:last-child{margin-bottom:0}
 .form-row label{display:block;font-size:12px;color:var(--color-text-secondary);margin-bottom:4px}
-.form-row input,.form-row select{width:100%;padding:10px 12px;font-size:15px;border:1px solid #D8C9BA;border-radius:10px;background:#fff;color:var(--color-text-primary);min-height:44px}
+.form-row input,
+.form-row select{
+  display:block;
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  box-sizing:border-box;
+
+  padding:10px 12px;
+  font-size:15px;
+  border:1px solid #D8C9BA;
+  border-radius:10px;
+  background:#fff;
+  color:var(--color-text-primary);
+  min-height:44px;
+}
+.date-row{display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:8px;
+  width:100%;
+}
 .date-triplet{display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:6px}
 .date-triplet input{text-align:center}
 .date-triplet input::placeholder{color:var(--color-text-tertiary,#AAA)}
