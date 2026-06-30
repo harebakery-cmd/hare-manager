@@ -212,10 +212,10 @@ body{font-family:var(--font-sans);color:var(--color-text-primary);font-size:15px
 .btn-confirm{background:#F5EDE3;border-color:#C8844A;color:#7D4A1A;font-weight:500}
 .btn-confirm:active{opacity:.7}
 
-.shift-section{margin-bottom:12px;border:1px solid #E6D8CA;border-radius:12px;background:#FBF6EF;padding:12px}
-.shift-title{font-size:13px;font-weight:700;color:#4B4037;margin-bottom:8px;padding-bottom:7px;border-bottom:1px solid #E6D8CA}
-.emp-btn-grid{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.emp-pick-btn{padding:9px 14px;font-size:14px;border:0.5px solid var(--color-border-secondary);border-radius:20px;cursor:pointer;background:transparent;color:var(--color-text-primary);min-height:44px}
+.shift-section{margin-bottom:9px;border:1px solid #E6D8CA;border-radius:10px;background:#FBF6EF;padding:9px}
+.shift-title{font-size:13px;font-weight:700;color:#4B4037;margin-bottom:7px;padding-bottom:6px;border-bottom:1px solid #E6D8CA}
+.emp-btn-grid{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.emp-pick-btn{padding:4px 8px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:14px;cursor:pointer;background:transparent;color:var(--color-text-primary);min-height:28px}
 .emp-pick-btn:active{opacity:.7}
 .emp-pick-btn.sel-open{background:#EAF3DE;border-color:#639922;color:#27500A}
 .emp-pick-btn.sel-mid{background:#E1F5EE;border-color:#1D9E75;color:#085041}
@@ -225,6 +225,17 @@ body{font-family:var(--font-sans);color:var(--color-text-primary);font-size:15px
 .emp-pick-btn.sel-half_am{background:#F0E8F8;border-color:#9B5DC8;color:#5B2E91}
 .emp-pick-btn.sel-half_pm{background:#EAE1F8;border-color:#7A4DB8;color:#4A2080}
 .emp-pick-btn.sel-quarter{background:#F5EDF8;border-color:#8B4BBE;color:#6B35A0}
+.shift-title-main{display:flex;align-items:center;gap:5px;min-width:0}
+.shift-title-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.shift-pos-btn{width:22px;height:22px;border:1px solid #D8C9BA;border-radius:50%;background:#fff;color:#7D4A1A;font-size:10px;font-weight:800;line-height:1;cursor:pointer}
+.shift-pos-btn.on{background:#F5EDE3;border-color:#C8844A}
+.shift-pos-panel{display:none;margin:-2px 0 8px;padding:6px;border:1px dashed #D8C9BA;border-radius:8px;background:#fff}
+.shift-pos-panel.open{display:block}
+.shift-pos-hint{font-size:10px;color:var(--color-text-secondary);margin-bottom:5px}
+.shift-pos-chip{padding:3px 7px;font-size:11px;border:1px solid #D8C9BA;border-radius:12px;background:#fff;color:var(--color-text-primary);cursor:pointer;min-height:24px}
+.shift-pos-chip.on{background:#F5EDE3;border-color:#C8844A;color:#7D4A1A;font-weight:700}
+.emp-pos-mark{display:inline-flex;align-items:center;justify-content:center;margin-left:3px;padding:0 3px;min-width:12px;height:12px;border-radius:6px;background:#C8844A;color:#fff;font-size:8px;font-weight:800;vertical-align:middle}
+.emp-pick-btn.is-pos{box-shadow:inset 0 0 0 1.5px #C8844A}
 .close-btn{width:100%;padding:13px;font-size:15px;border:0.5px solid var(--color-border-secondary);border-radius:10px;cursor:pointer;background:var(--color-background-secondary);color:var(--color-text-secondary);min-height:48px;margin-top:8px}
 
 .mgmt-wrap{padding:12px 0}
@@ -312,6 +323,23 @@ function getOT(dayData,name){const v=dayData[otKey(name)];return(v&&v>0)?v:0;}
 // 연장 근무 사유 키: '__otr__이름' → 사유 문자열
 function otrKey(name){return '__otr__'+name;}
 function getOTR(dayData,name){return dayData[otrKey(name)]||'';}
+function posKey(shift){return shift==='오픈'?'__pos_open__':shift==='마감'?'__pos_close__':'';}
+function legacyPosKey(name){return '__pos__'+name;}
+function getPosName(dayData,shift){
+  const key=posKey(shift);
+  if(key&&dayData[key])return dayData[key];
+  const legacy=Object.keys(dayData||{}).find(k=>k.startsWith('__pos__')&&dayData[k]);
+  if(!legacy)return '';
+  const name=legacy.slice(7);
+  return dayData[name]===shift?name:'';
+}
+function setPosName(dayData,shift,name){
+  const key=posKey(shift);
+  if(!key)return;
+  Object.keys(dayData||{}).forEach(k=>{if(k.startsWith('__pos__'))delete dayData[k];});
+  delete dayData[key];
+  if(name)dayData[key]=name;
+}
 const SECTIONS_ALL=['매장','공장'];
 
 // Logo images (base64 encoded from uploaded files)
@@ -1018,21 +1046,22 @@ function renderCalendar(parent,store){
     // 미들: 이름 표시, 없으면 빈 공간
     // 휴무: 이름+월누적횟수
     const empsForDay=getEmps(store.id,APP.activeSection);
-    // 날짜별 POS 담당자: dayData['__pos__이름'] = true
-    const posNames=new Set(Object.keys(dayData||{}).filter(k=>k.startsWith('__pos__')).map(k=>k.slice(7)));
+    const openPosName=getPosName(dayData,'오픈');
+    const closePosName=getPosName(dayData,'마감');
 
     // helper: render name with pos mark and overtime
-    function renderNameWithPos(name){
+    function renderNameWithPos(name,shift){
       const ot=getOT(dayData,name);
       const otStr=ot>0?`<span style="font-size:8px;font-weight:700;color:#185FA5;margin-left:1px">+${ot}h</span>`:'';
-      return posNames.has(name)?`${calendarDisplayName(name)}<span class="pos-mark">P</span>${otStr}`:calendarDisplayName(name)+otStr;
+      const isPos=(shift==='오픈'&&openPosName===name)||(shift==='마감'&&closePosName===name);
+      return isPos?`${calendarDisplayName(name)}<span class="pos-mark">P</span>${otStr}`:calendarDisplayName(name)+otStr;
     }
 
     // 오픈/미들/마감/휴무: 있으면 badge, 없으면 spacer (높이 균등 분배)
     // 오픈
     if(byShift['오픈'].length){
       const b=document.createElement('div');b.className=`dbadge ${SHIFT_CLS['오픈']}`;
-      b.innerHTML=`<span class="dbadge-label">오픈</span><span class="dbadge-names">${byShift['오픈'].map(n=>renderNameWithPos(n)).join(' ')}</span>`;
+      b.innerHTML=`<span class="dbadge-label">오픈</span><span class="dbadge-names">${byShift['오픈'].map(n=>renderNameWithPos(n,'오픈')).join(' ')}</span>`;
       badges.appendChild(b);
     }
     // 미들
@@ -1044,7 +1073,7 @@ function renderCalendar(parent,store){
     // 마감
     if(byShift['마감'].length){
       const b=document.createElement('div');b.className=`dbadge ${SHIFT_CLS['마감']}`;
-      b.innerHTML=`<span class="dbadge-label">마감</span><span class="dbadge-names">${byShift['마감'].map(n=>renderNameWithPos(n)).join(' ')}</span>`;
+      b.innerHTML=`<span class="dbadge-label">마감</span><span class="dbadge-names">${byShift['마감'].map(n=>renderNameWithPos(n,'마감')).join(' ')}</span>`;
       badges.appendChild(b);
     }
     // 휴무 (이름+월누적 횟수)
@@ -1476,9 +1505,12 @@ function renderModal(root){
     // build summary rows – only groups that have people
     const byShiftSummary={};
     Object.entries(dayData).forEach(([name,sh])=>{
+      if(!SHIFTS.includes(sh))return;
       if(!byShiftSummary[sh])byShiftSummary[sh]=[];
       byShiftSummary[sh].push(name);
     });
+    const summaryOpenPos=getPosName(dayData,'오픈');
+    const summaryClosePos=getPosName(dayData,'마감');
 
     let hasAnyone=false;
     SHIFT_GROUPS.forEach(sg=>{
@@ -1498,7 +1530,10 @@ function renderModal(root){
       row.appendChild(lbl);
       const nameSpan=document.createElement('span');
       nameSpan.style.cssText='font-size:13px;color:var(--color-text-primary);line-height:1.6';
-      nameSpan.textContent=names.join(', ');
+      nameSpan.innerHTML=names.map(name=>{
+        const isPos=(sg.key==='오픈'&&summaryOpenPos===name)||(sg.key==='마감'&&summaryClosePos===name);
+        return `${escHtml(name)}${isPos?'<span class="emp-pos-mark">P</span>':''}`;
+      }).join(', ');
       row.appendChild(nameSpan);
       summaryCard.appendChild(row);
     });
@@ -1538,13 +1573,65 @@ function renderModal(root){
       const sec=document.createElement('div');sec.className='shift-section';
       const titleRow=document.createElement('div');titleRow.className='shift-title';
       titleRow.style.cssText='cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none';
-      const titleText=document.createElement('span');titleText.textContent=sg.label;titleRow.appendChild(titleText);
-      const arrow=document.createElement('span');arrow.textContent=sg.open?'▲':'▼';arrow.style.cssText='font-size:10px;opacity:.5';titleRow.appendChild(arrow);
+      const titleMain=document.createElement('div');titleMain.className='shift-title-main';
+      const titleText=document.createElement('span');titleText.textContent=sg.label;titleMain.appendChild(titleText);
+      titleRow.appendChild(titleMain);
+      const titleActions=document.createElement('div');titleActions.className='shift-title-actions';
+      const hasPosPicker=sg.key==='오픈'||sg.key==='마감';
+      let posPanel=null;
+      if(hasPosPicker){
+        const currentPos=getPosName(dayData,sg.key);
+        const posBtn=document.createElement('button');
+        posBtn.type='button';
+        posBtn.className='shift-pos-btn'+(currentPos?' on':'');
+        posBtn.textContent='P';
+        posBtn.title=`${sg.key} 포스 담당자 선택`;
+        posBtn.onclick=(ev)=>{
+          ev.stopPropagation();
+          const workers=emps.filter(e=>dayData[e.name]===sg.key);
+          if(!workers.length){alert(`${sg.key} 근무자를 먼저 선택해주세요.`);return;}
+          posPanel.classList.toggle('open');
+        };
+        titleActions.appendChild(posBtn);
+      }
+      const arrow=document.createElement('span');arrow.textContent=sg.open?'▲':'▼';arrow.style.cssText='font-size:10px;opacity:.5';titleActions.appendChild(arrow);
+      titleRow.appendChild(titleActions);
       sec.appendChild(titleRow);
       const btnGrid=document.createElement('div');btnGrid.className='emp-btn-grid';
       if(!sg.open)btnGrid.style.display='none';
       let isOpen=sg.open;
       titleRow.onclick=()=>{isOpen=!isOpen;btnGrid.style.display=isOpen?'flex':'none';arrow.textContent=isOpen?'▲':'▼';};
+      if(hasPosPicker){
+        posPanel=document.createElement('div');posPanel.className='shift-pos-panel';
+        const hint=document.createElement('div');hint.className='shift-pos-hint';hint.textContent=`${sg.key} 근무자 중 포스 담당자를 선택`;
+        posPanel.appendChild(hint);
+        const posGrid=document.createElement('div');posGrid.className='emp-btn-grid';
+        const currentPos=getPosName(dayData,sg.key);
+        const assigned=emps.filter(e=>dayData[e.name]===sg.key);
+        if(assigned.length){
+          const clearBtn=document.createElement('button');
+          clearBtn.type='button';
+          clearBtn.className='shift-pos-chip'+(!currentPos?' on':'');
+          clearBtn.textContent='해제';
+          clearBtn.onclick=()=>{setPosName(dayData,sg.key,'');save();APP.modal={...m};render();};
+          posGrid.appendChild(clearBtn);
+          assigned.forEach(e=>{
+            const chip=document.createElement('button');
+            chip.type='button';
+            chip.className='shift-pos-chip'+(currentPos===e.name?' on':'');
+            chip.textContent=e.name;
+            chip.onclick=()=>{setPosName(dayData,sg.key,currentPos===e.name?'':e.name);save();APP.modal={...m};render();};
+            posGrid.appendChild(chip);
+          });
+        } else {
+          const empty=document.createElement('div');
+          empty.style.cssText='font-size:12px;color:var(--color-text-secondary);padding:3px 0';
+          empty.textContent=`${sg.key} 근무자를 먼저 선택해주세요.`;
+          posGrid.appendChild(empty);
+        }
+        posPanel.appendChild(posGrid);
+        sec.appendChild(posPanel);
+      }
       emps.forEach(e=>{
         const cur=dayData[e.name];
         const b=document.createElement('button');
@@ -1564,32 +1651,20 @@ function renderModal(root){
         } else {
           b.textContent=e.name;
         }
+        const currentPosForShift=hasPosPicker?getPosName(dayData,sg.key):'';
+        if(currentPosForShift===e.name){
+          b.classList.add('is-pos');
+          b.title='포스 담당자';
+        }
         b.onclick=()=>{
+          const prevShift=dayData[e.name];
           dayData[e.name]=dayData[e.name]===sg.key?undefined:sg.key;
           if(dayData[e.name]===undefined)delete dayData[e.name];
+          if((prevShift==='오픈'||prevShift==='마감')&&getPosName(dayData,prevShift)===e.name)setPosName(dayData,prevShift,'');
+          if(hasPosPicker&&getPosName(dayData,sg.key)===e.name)setPosName(dayData,sg.key,'');
           save();APP.modal={...m};render();
         };
-        // POS 담당자 토글 버튼 (오픈, 마감에만)
-        if(sg.key==='오픈'||sg.key==='마감'){
-          const wrapper=document.createElement('div');wrapper.style.cssText='display:inline-flex;align-items:center;gap:2px;flex-shrink:0';
-          wrapper.appendChild(b);
-          const posBtn=document.createElement('button');
-          posBtn.type='button';
-          posBtn.title='포스 담당자로 지정';
-          const posKey='__pos__'+e.name;
-          const isCurrentPos=!!(dayData[posKey]);
-          posBtn.style.cssText=`padding:5px 7px;font-size:11px;font-weight:700;border:1px solid ${isCurrentPos?'#C8844A':'#D8C9BA'};border-radius:14px;cursor:pointer;background:${isCurrentPos?'#F5EDE3':'transparent'};color:${isCurrentPos?'#7D4A1A':'var(--color-text-secondary)'};min-height:36px;white-space:nowrap`;
-          posBtn.textContent=isCurrentPos?'P ✓':'P';
-          posBtn.onclick=(ev)=>{
-            ev.stopPropagation();
-            if(dayData[posKey])delete dayData[posKey];else dayData[posKey]=true;
-            save();APP.modal={...m};render();
-          };
-          wrapper.appendChild(posBtn);
-          btnGrid.appendChild(wrapper);
-        } else {
-          btnGrid.appendChild(b);
-        }
+        btnGrid.appendChild(b);
       });
       sec.appendChild(btnGrid);modal.appendChild(sec);
     });
