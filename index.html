@@ -553,6 +553,11 @@ let APP={
 function empKey(sid,sec){return `${sid}__${sec}`}
 function schedKey(sid,sec,y,m){return `${sid}__${sec}__${y}__${m}`}
 function getEmps(sid,sec){return APP.employees[empKey(sid,sec)]||[]}
+function isEmployeeActiveOnDate(emp,dayKey){
+  // 퇴사일 당일까지는 근무 가능, 다음 날부터 스케줄 선택에서 제외
+  return !emp.leaveDate||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(emp.leaveDate)||dayKey<=emp.leaveDate;
+}
+function getEmpsForDate(sid,sec,dayKey){return getEmps(sid,sec).filter(emp=>isEmployeeActiveOnDate(emp,dayKey))}
 function setEmps(sid,sec,arr){APP.employees[empKey(sid,sec)]=arr}
 function getSched(sid,sec,y,m){const k=schedKey(sid,sec,y,m);if(!APP.schedules[k])APP.schedules[k]={};return APP.schedules[k]}
 function save(){try{const data={...APP,adminUnlocked:false};localStorage.setItem('hr_mob_v2',JSON.stringify(data));sessionStorage.setItem('hr_mob_v2',JSON.stringify(data))}catch(e){}}
@@ -1239,8 +1244,9 @@ function renderCalendar(parent,store){
     cell.appendChild(dn);
 
     const dayData=sched[dayKey]||{};
+    const activeNamesForDay=new Set(getEmpsForDate(store.id,APP.activeSection,dayKey).map(e=>e.name));
     const byShift={오픈:[],미들:[],마감:[],휴무:[],연차:[],오전반차:[],오후반차:[],반반차:[]};
-    Object.entries(dayData).forEach(([n,s])=>{if(byShift[s])byShift[s].push(n)});
+    Object.entries(dayData).forEach(([n,s])=>{if(byShift[s]&&activeNamesForDay.has(n))byShift[s].push(n)});
 
     const badges=document.createElement('div');badges.className='day-badges';
     // Fixed 4-row layout: 오픈 / 미들(or spacer) / 마감 / 휴무
@@ -1287,7 +1293,7 @@ function renderCalendar(parent,store){
     }
     cell.appendChild(badges);
 
-    const emps=getEmps(store.id,APP.activeSection);
+    const emps=getEmpsForDate(store.id,APP.activeSection,dayKey);
     const openDay=()=>{
       if(emps.length===0){alert('직원을 먼저 등록해주세요.');return;}
       APP.modal={type:'day',storeId:store.id,section:APP.activeSection,dayKey,y:APP.calYear,m:APP.calMonth,d};
@@ -1585,7 +1591,7 @@ function renderMemo(parent,store){
 }
 
 function renderEmpSection(parent,store){
-  const emps=getEmps(store.id,APP.activeSection);
+  const emps=getEmpsForDate(store.id,APP.activeSection,todayStr());
   const sec=document.createElement('div');sec.className='emp-section';
   const toolbar=document.createElement('div');toolbar.className='emp-toolbar';
   if(APP._toggles===undefined)APP._toggles={};
@@ -1683,7 +1689,8 @@ function renderModal(root){
     const sched=getSched(m.storeId,m.section,m.y,m.m);
     if(!sched[m.dayKey])sched[m.dayKey]={};
     const dayData=sched[m.dayKey];
-    const emps=getEmps(m.storeId,m.section);
+    const emps=getEmpsForDate(m.storeId,m.section,m.dayKey);
+    const activeEmployeeNames=new Set(emps.map(e=>e.name));
     const dow=new Date(m.y,m.m,m.d).getDay();
 
     const h3=document.createElement('h3');
@@ -1712,7 +1719,7 @@ function renderModal(root){
     // build summary rows – only groups that have people
     const byShiftSummary={};
     Object.entries(dayData).forEach(([name,sh])=>{
-      if(!SHIFTS.includes(sh))return;
+      if(!SHIFTS.includes(sh)||!activeEmployeeNames.has(name))return;
       if(!byShiftSummary[sh])byShiftSummary[sh]=[];
       byShiftSummary[sh].push(name);
     });
