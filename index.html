@@ -434,10 +434,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .modal-handle{display:none}
 .modal h3{margin-bottom:18px;font-size:22px;font-weight:720;letter-spacing:-.03em}
 .shift-section{padding:12px;border-color:rgba(177,132,89,.22);border-radius:14px;background:#FBF8F4}
-.shift-title{min-height:38px;margin-bottom:8px;padding-bottom:8px;font-size:14px}
-.emp-btn-grid{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.shift-title{min-height:34px;margin-bottom:6px;padding-bottom:6px;font-size:14px}
+.emp-btn-grid{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:5px}
 .emp-btn-grid[style*="display: none"]{display:none!important}
-.emp-pick-btn{width:100%;min-height:42px;padding:9px 12px;border-radius:12px;font-size:14px;background:#fff}
+.emp-pick-btn{width:100%;min-height:34px;padding:6px 8px;border-radius:10px;font-size:13px;line-height:1.2;background:#fff}
 .shift-pos-chip{min-height:38px;padding:8px 11px}
 .close-btn{min-height:50px;border:0;border-radius:14px;background:#1D1D1F;color:#fff;font-weight:650}
 .form-row input,.form-row select{border-color:rgba(60,60,67,.18);border-radius:12px}
@@ -471,9 +471,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   .modal{width:100%;max-width:none;max-height:92dvh;padding:10px 14px calc(24px + env(safe-area-inset-bottom));border-radius:24px 24px 0 0}
   .modal-handle{display:block;margin-bottom:14px}
   .modal h3{font-size:20px}
-  .shift-section{padding:11px 10px}
-  .emp-btn-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
-  .emp-pick-btn{min-height:46px;padding:10px 8px;font-size:14px}
+  .shift-section{padding:9px 8px}
+  .emp-btn-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+  .emp-pick-btn{min-height:34px;padding:6px 4px;border-radius:9px;font-size:12px}
   .home-logo-full{width:min(78vw,360px)}
 }
 @media (max-width:390px){
@@ -1820,14 +1820,14 @@ function renderModal(root){
           clearBtn.type='button';
           clearBtn.className='shift-pos-chip'+(!currentPos?' on':'');
           clearBtn.textContent='해제';
-          clearBtn.onclick=()=>{setPosName(dayData,sg.key,'');save();APP.modal={...m};render();};
+          clearBtn.onclick=()=>{const scrollTop=modal.scrollTop;setPosName(dayData,sg.key,'');save();APP.modal={...m,scrollTop};render();};
           posGrid.appendChild(clearBtn);
           assigned.forEach(e=>{
             const chip=document.createElement('button');
             chip.type='button';
             chip.className='shift-pos-chip'+(currentPos===e.name?' on':'');
             chip.textContent=e.name;
-            chip.onclick=()=>{setPosName(dayData,sg.key,currentPos===e.name?'':e.name);save();APP.modal={...m};render();};
+            chip.onclick=()=>{const scrollTop=modal.scrollTop;setPosName(dayData,sg.key,currentPos===e.name?'':e.name);save();APP.modal={...m,scrollTop};render();};
             posGrid.appendChild(chip);
           });
         } else {
@@ -1869,7 +1869,8 @@ function renderModal(root){
           if(dayData[e.name]===undefined)delete dayData[e.name];
           if((prevShift==='오픈'||prevShift==='마감')&&getPosName(dayData,prevShift)===e.name)setPosName(dayData,prevShift,'');
           if(hasPosPicker&&getPosName(dayData,sg.key)===e.name)setPosName(dayData,sg.key,'');
-          save();APP.modal={...m};render();
+          const scrollTop=modal.scrollTop;
+          save();APP.modal={...m,scrollTop};render();
         };
         btnGrid.appendChild(b);
       });
@@ -2106,6 +2107,7 @@ function renderModal(root){
   }
 
   bg.appendChild(modal);wrap.appendChild(bg);root.appendChild(wrap);
+  if(m.type==='day'&&m.scrollTop)modal.scrollTop=m.scrollTop;
 }
 
 
