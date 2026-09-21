@@ -488,6 +488,35 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 @media (prefers-reduced-transparency:reduce){
   .bottom-nav,.top-nav,.cal-wrap,.stats-wrap,.emp-section,.memo-section,.modal{backdrop-filter:none;-webkit-backdrop-filter:none;background:#fff}
 }
+
+/* Responsive workspace and compact disclosure panels */
+.workspace-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 0 8px}
+.workspace-header strong{font-size:19px;letter-spacing:-.04em}.workspace-header span{font-size:12px;color:var(--color-text-secondary)}
+.schedule-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}
+.schedule-main,.schedule-side{min-width:0}.schedule-side{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}.schedule-side>*{min-width:0}
+.schedule-side .stats-wrap,.schedule-side .emp-section{margin:0;padding:12px 14px;border-radius:16px}
+.disclosure{min-width:0;border:1px solid var(--color-border-tertiary);border-radius:16px;background:var(--surface);overflow:hidden}
+.disclosure>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:12px 14px;cursor:pointer;font-size:14px;font-weight:650;list-style:none}
+.disclosure>summary::-webkit-details-marker{display:none}.disclosure>summary::after{content:'＋';color:var(--brand-strong);font-size:18px}.disclosure[open]>summary::after{content:'−'}
+.disclosure>summary:focus-visible,.cal-day:focus-visible{outline:3px solid #B18459;outline-offset:-3px}
+.disclosure-body{padding:0 12px 12px;min-width:0}.disclosure-body>.memo-section,.disclosure-body>.admin-card,.disclosure-body>.import-card,.disclosure-body>.store-card{margin:0;box-shadow:none;border:0;padding:10px 0;background:transparent;backdrop-filter:none}
+.panel-toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:44px;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}
+.panel-toggle::after{content:'＋';font-size:18px;color:var(--brand-strong)}.panel-toggle[aria-expanded=true]::after{content:'−'}.panel-toggle>span:last-child{display:none}
+.emp-toolbar{margin-bottom:0}.panel-body{max-height:480px;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+.memo-textarea{max-height:200px;overflow-y:auto!important;resize:vertical}
+.export-menu{margin:0 0 12px auto;width:fit-content;min-width:160px}.export-menu .dl-wrap{display:grid;margin:0}.export-menu>summary{min-height:44px}
+.schedule-toolbar{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px}.schedule-toolbar .sec-row{min-width:0;padding:0;flex:1}.schedule-toolbar .export-menu{flex:0 0 118px;min-width:0;margin:0}.schedule-toolbar .export-menu[open]{flex-basis:190px}.schedule-toolbar .export-menu>summary{font-size:12px;padding:10px}
+.store-tab{display:flex;align-items:center;flex:none;gap:3px}.store-tab .tab-pencil{position:static;min-width:36px;min-height:44px;margin:0;border:0;border-radius:12px;background:transparent;cursor:pointer}
+.calendar-options{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px;font-size:11px;color:var(--color-text-secondary)}
+.calendar-options button{min-height:44px;padding:8px 12px;border:1px solid var(--color-border-secondary);border-radius:12px;background:white;color:var(--brand-strong);white-space:nowrap}
+.cal-wrap.compact .cal-day{height:112px;min-height:0}.cal-wrap.compact .day-num{height:28px;overflow:hidden}.cal-wrap.compact .day-num-extra{overflow:hidden;max-height:26px}
+.cal-wrap.compact .day-badges{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px}
+.cal-wrap.compact .dbadge-names{display:none}.dbadge-count{display:none}.cal-wrap.compact .dbadge-count{display:inline}.cal-wrap.compact .dbadge-label{display:inline;margin-right:3px}.cal-wrap.compact .dbadge{white-space:nowrap;padding:3px;font-size:10px}
+.mgmt-wrap{max-width:900px;margin:auto}.mgmt-wrap>.disclosure{margin-bottom:12px}
+.btn-mini,.btn-del,.btn-add,.btn-excel,.btn-imgdl,.sec-btn,.memo-save-btn,.btn-admin,.sec-tag,.btn-store-save,.btn-store-del{min-height:44px}
+.admin-row{flex-wrap:wrap}.admin-row input{min-width:0;flex:1 1 160px}.emp-main-line{grid-template-columns:minmax(0,1fr)}.emp-actions{justify-content:flex-end;flex-wrap:wrap}
+@media(min-width:1100px){.app{max-width:1560px;padding-left:28px;padding-right:28px;padding-top:12px}.bottom-nav{top:14px;bottom:auto;left:auto;right:28px;transform:none;width:320px;height:54px;padding:4px;border-radius:16px}.bnav-btn{flex-direction:row;gap:8px;min-height:44px;font-size:13px}.workspace-header{padding-right:340px;min-height:62px}.top-nav{top:0}.schedule-layout{grid-template-columns:minmax(0,1fr) 340px;gap:20px}.cal-wrap{margin:0;padding:16px;border-radius:18px}.schedule-side{position:sticky;top:76px}.home-wrap{min-height:calc(100dvh - 200px)}}
+@media(max-width:700px){.workspace-header{padding:12px 4px 4px}.workspace-header strong{font-size:17px}.workspace-header span{font-size:11px}.schedule-layout{gap:8px}.cal-wrap.compact .cal-day{height:100px}.cal-wrap.compact .day-badges{grid-template-columns:1fr;gap:2px}.cal-wrap.compact .dbadge{font-size:9px;padding:1px 2px;line-height:1.4}.cal-header{flex-wrap:wrap}.cal-header h3{font-size:17px}.cal-nav button{min-width:44px;min-height:44px}.calendar-options{padding:0 5px}.panel-body{max-height:420px}.form-row input,.form-row select,.admin-row input,.memo-textarea{font-size:16px}.export-menu{margin-bottom:8px}.schedule-side{gap:8px}}
 </style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -909,6 +938,23 @@ function getFallbackKoreanHolidays(year){
 }
 
 
+function disclosure(parent,key,title,node,initial=false){
+  if(!APP._toggles)APP._toggles={};
+  const panel=document.createElement('details');panel.className='disclosure';
+  panel.open=APP._toggles[key]??initial;
+  const summary=document.createElement('summary');summary.textContent=title;
+  const body=document.createElement('div');body.className='disclosure-body';body.appendChild(node);
+  panel.append(summary,body);
+  panel.addEventListener('toggle',()=>{APP._toggles[key]=panel.open;});
+  parent.appendChild(panel);return panel;
+}
+function bindPanel(button,body,key,open){
+  button.type='button';button.className='panel-toggle';button.removeAttribute('style');
+  body.classList.add('panel-body');body.id=key.replace(/[^a-z0-9_-]/gi,'_');
+  button.setAttribute('aria-controls',body.id);
+  const update=()=>{button.setAttribute('aria-expanded',String(open));body.style.display=open?'block':'none';};
+  button.onclick=()=>{open=!open;APP._toggles[key]=open;update();};update();
+}
 function render(){
   const root=document.getElementById('app');
   root.innerHTML='';
@@ -938,6 +984,7 @@ function render(){
 
   const content=document.createElement('div');
   content.style.paddingTop='4px';
+  const header=document.createElement('header');header.className='workspace-header';header.innerHTML='<strong>하레하레 매니저</strong><span>일정과 직원 관리</span>';content.appendChild(header);
 
   if(APP.view==='home'){
     renderHome(content);
@@ -970,6 +1017,7 @@ function renderScheduleView(parent){
     b.className='tab-btn'+(APP.activeStoreId===s.id?' active':'');
     const nameWrap=document.createElement('span');nameWrap.className='tab-name-wrap';
     nameWrap.textContent=s.name;
+    let storeEdit=null;
     if(APP.activeStoreId===s.id){
       const pencil=document.createElement('button');
       pencil.className='tab-pencil';
@@ -980,11 +1028,14 @@ function renderScheduleView(parent){
         APP.modal={type:'editStoreName',storeId:s.id,form:{name:s.name}};
         render();
       };
-      nameWrap.appendChild(pencil);
+      pencil.setAttribute('aria-label',s.name+' 점포명 수정');
+      storeEdit=pencil;
     }
     b.appendChild(nameWrap);
     b.onclick=()=>{APP.activeStoreId=s.id;APP.activeSection=s.sections[0]||'매장';render()};
-    nav.appendChild(b);
+    const storeTab=document.createElement('div');storeTab.className='store-tab';
+    storeTab.appendChild(b);if(storeEdit)storeTab.appendChild(storeEdit);
+    nav.appendChild(storeTab);
   });
   parent.appendChild(nav);
 
@@ -1037,12 +1088,18 @@ function renderScheduleView(parent){
   imgBtn.onclick=()=>{APP.modal={type:'imageFormat',storeId:store.id,section:APP.activeSection};render();};
   dlWrap.appendChild(imgBtn);
   dlWrap.appendChild(dlBtn);
-  content.appendChild(dlWrap);
-
-  renderCalendar(content,store);
-  renderMemo(content,store);
-  renderStats(content,store);
-  renderEmpSection(content,store);
+  const exports=disclosure(content,'exports','다운로드',dlWrap);exports.classList.add('export-menu');
+  const toolbar=document.createElement('div');toolbar.className='schedule-toolbar';
+  const sections=content.querySelector('.sec-row');if(sections)toolbar.appendChild(sections);
+  toolbar.appendChild(exports);content.appendChild(toolbar);
+  const layout=document.createElement('div');layout.className='schedule-layout';
+  const main=document.createElement('div');main.className='schedule-main';
+  const side=document.createElement('aside');side.className='schedule-side';side.setAttribute('aria-label','메모와 직원 현황');
+  renderCalendar(main,store);
+  const memo=document.createElement('div');renderMemo(memo,store);
+  disclosure(side,'memo_'+store.id+'_'+APP.activeSection,'월간 메모',memo.firstElementChild);
+  renderStats(side,store);renderEmpSection(side,store);
+  layout.append(main,side);content.appendChild(layout);
   parent.appendChild(content);
 }
 
@@ -1101,7 +1158,7 @@ function renderMgmt(parent){
     auth.querySelector('#admin-change-msg').textContent='비밀번호가 변경되었습니다.';
   };
   auth.querySelector('#admin-lock').onclick=()=>{APP.adminUnlocked=false;render()};
-  wrap.appendChild(auth);
+  disclosure(wrap,'admin_settings','관리자 설정',auth);
 
   const importCard=document.createElement('div');importCard.className='import-card';
   importCard.innerHTML=`<h4>직원 정보 엑셀 업로드</h4>
@@ -1116,7 +1173,7 @@ function renderMgmt(parent){
   const fileInput=importCard.querySelector('#emp-upload-file');
   importCard.querySelector('#emp-upload-btn').onclick=()=>fileInput.click();
   fileInput.onchange=(e)=>{handleEmployeeExcelUpload(e.target.files[0]);e.target.value='';};
-  wrap.appendChild(importCard);
+  disclosure(wrap,'employee_import','직원 엑셀 가져오기',importCard);
 
   const storeTitle=document.createElement('h3');storeTitle.textContent='점포 관리';wrap.appendChild(storeTitle);
 
@@ -1162,7 +1219,7 @@ function renderMgmt(parent){
       save();render();
     };
     actRow.appendChild(saveBtn);actRow.appendChild(delBtn);card.appendChild(actRow);
-    wrap.appendChild(card);
+    disclosure(wrap,'store_settings_'+store.id,store.name+' · 점포 설정',card);
   });
 
   const addBtn=document.createElement('button');
@@ -1177,7 +1234,7 @@ function renderMgmt(parent){
 }
 
 function renderCalendar(parent,store){
-  const wrap=document.createElement('div');wrap.className='cal-wrap';
+  const wrap=document.createElement('div');wrap.className='cal-wrap'+(APP._calendarFull?'':' compact');
   const hdr=document.createElement('div');hdr.className='cal-header';
   const title=document.createElement('h3');title.textContent=`${APP.calYear}년 ${APP.calMonth+1}월 달력`;
   const navDiv=document.createElement('div');navDiv.className='cal-nav';
@@ -1192,6 +1249,12 @@ function renderCalendar(parent,store){
   navDiv.appendChild(todayBtn);navDiv.appendChild(prev);navDiv.appendChild(next);
   hdr.appendChild(title);hdr.appendChild(navDiv);wrap.appendChild(hdr);
 
+  const options=document.createElement('div');options.className='calendar-options';
+  const hint=document.createElement('span');hint.textContent='날짜를 누르면 상세 근무를 확인할 수 있어요';
+  const density=document.createElement('button');density.type='button';
+  const updateDensity=()=>{density.textContent=APP._calendarFull?'간단히 보기':'이름 펼쳐 보기';density.setAttribute('aria-pressed',String(!!APP._calendarFull));};
+  density.onclick=()=>{APP._calendarFull=!APP._calendarFull;wrap.classList.toggle('compact',!APP._calendarFull);updateDensity();};updateDensity();
+  options.append(hint,density);wrap.appendChild(options);
   const grid=document.createElement('div');grid.className='cal-grid';
   DOWS.forEach((d,i)=>{
     const el=document.createElement('div');el.className='cal-dow';el.textContent=d;
@@ -1291,6 +1354,7 @@ function renderCalendar(parent,store){
       b.innerHTML=`<span class="dbadge-label">휴무</span><span class="dbadge-names">${short}</span>`;
       badges.appendChild(b);
     }
+    badges.querySelectorAll('.dbadge').forEach(b=>{const label=b.querySelector('.dbadge-label').textContent;const count=document.createElement('span');count.className='dbadge-count';count.textContent=byShift[label].length;b.appendChild(count);b.title=label+': '+byShift[label].join(', ');});
     cell.appendChild(badges);
 
     const emps=getEmpsForDate(store.id,APP.activeSection,dayKey);
@@ -1331,14 +1395,14 @@ function renderStats(parent,store){
   const toggleKey='stats_open_'+APP.activeStoreId+'_'+APP.activeSection;
   if(APP._toggles===undefined)APP._toggles={};
   const isStatsOpen=!!APP._toggles[toggleKey];
-  const h4=document.createElement('div');
+  const h4=document.createElement('button');
   h4.style.cssText='display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:2px 0;user-select:none';
   h4.innerHTML=`<span style="font-size:13px;font-weight:500;color:var(--color-text-secondary)">${APP.calYear}년 ${APP.calMonth+1}월 월별 현황</span><span style="font-size:11px;color:var(--color-text-secondary)">${isStatsOpen?'▲':'▼'}</span>`;
   wrap.appendChild(h4);
   const statsBody=document.createElement('div');
   statsBody.style.display=isStatsOpen?'block':'none';
   statsBody.style.marginTop='10px';
-  h4.onclick=()=>{APP._toggles[toggleKey]=!APP._toggles[toggleKey];render();};
+  bindPanel(h4,statsBody,toggleKey,isStatsOpen);
 
   // ── 직원별 월별 근무 횟수 ──────────────────────────────────────────
   const tbl=document.createElement('div');tbl.style.cssText='width:100%;overflow-x:auto;margin-bottom:12px';
@@ -1578,7 +1642,7 @@ function renderMemo(parent,store){
   wrap.appendChild(ta);
 
   // auto-resize
-  ta.oninput=()=>{ta.style.height='auto';ta.style.height=ta.scrollHeight+'px';};
+  ta.oninput=()=>{ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,200)+'px';};
 
   saveBtn.onclick=()=>{
     setMemo(store.id,sec,y,m,ta.value);
@@ -1597,13 +1661,14 @@ function renderEmpSection(parent,store){
   if(APP._toggles===undefined)APP._toggles={};
   const empToggleKey='emp_open_'+APP.activeStoreId+'_'+APP.activeSection;
   const isEmpOpen=!!APP._toggles[empToggleKey];
-  const h3=document.createElement('div');
+  const h3=document.createElement('button');
   h3.style.cssText='display:flex;align-items:center;justify-content:space-between;cursor:pointer;width:100%;user-select:none';
   h3.innerHTML=`<span style="font-size:14px;font-weight:500">${APP.activeSection} 직원 (${emps.length}명)</span><span style="font-size:11px;color:var(--color-text-secondary)">${isEmpOpen?'▲':'▼'}</span>`;
   h3.onclick=()=>{APP._toggles[empToggleKey]=!APP._toggles[empToggleKey];render();};
   toolbar.appendChild(h3);sec.appendChild(toolbar);
   const empBody=document.createElement('div');
   empBody.style.display=isEmpOpen?'block':'none';
+  bindPanel(h3,empBody,empToggleKey,isEmpOpen);
 
   if(emps.length===0){
     const msg=document.createElement('div');msg.className='empty-msg';msg.textContent='등록된 직원이 없습니다.';empBody.appendChild(msg);
@@ -1671,7 +1736,7 @@ function renderEmpSection(parent,store){
 
   const note=document.createElement('p');note.className='emp-note';
   note.textContent='매장: 월 8회 휴무 | 8시간 근무, 1시간 휴게 | 연차: 1년 만근 후 15개 발생 | 반차=0.5일, 반반차=0.25일 차감';
-  sec.appendChild(note);
+  empBody.appendChild(note);
   parent.appendChild(sec);
 }
 
