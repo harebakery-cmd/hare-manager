@@ -2195,6 +2195,9 @@ function prepareCalendarExportLayout(calEl,format){
     restoreStack.push([el,'__attr__'+name,el.getAttribute(name)]);
     el.setAttribute(name,value);
   };
+  // Always include employee names in the saved image, then restore the chosen view.
+  rememberAttr(calEl,'class',calEl.className.replace(/\bcompact\b/g,'').trim());
+  remember(calEl.querySelector('.calendar-options'),'display','none');
   const pad=Math.round(Math.min(format.width,format.height)*0.04);
   const targetW=format.width-pad*2;
   const targetH=format.height-pad*2;
